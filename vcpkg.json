@@ -1,0 +1,20 @@
+{
+  "name": "log-generator",
+  "version": "1.0.0",
+  "dependencies": [
+    {
+      "name": "imgui",
+      "features": [
+        "glfw-binding",
+        "opengl3-binding",
+        "freetype"
+      ]
+    },
+    "glfw3",
+    "yaml-cpp",
+    "nlohmann-json",
+    "fmt",
+    "implot",
+    "cpp-httplib"
+  ]
+}

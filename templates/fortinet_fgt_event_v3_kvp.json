@@ -1,0 +1,41 @@
+{
+  "id": "fortinet_fgt_event_v3_kvp",
+  "vendor": "fortinet",
+  "model": "fgt",
+  "logtype": "event",
+  "version": "v3",
+  "format": "KeyValue",
+  "description": "Fortinet FortiGate Event v3 KeyValue - HA cluster member join",
+  "sample": "date=2023-07-23 time=01:19:46 devname=InfosecMediawillFWS devid=FG200ETK18920980 eventtime=1690042786363770243 tz=+0900 logid=0108037894 type=event subtype=ha level=critical vd=root logdesc=Virtual cluster member joined msg=Virtual cluster detected member join vcluster=1 hagroup=0 sn=FG200ETK18921485",
+  "parser": {
+    "parserkey": "parserkey",
+    "type": 1,
+    "separator": "KeyValue",
+    "arrlength": -1
+  },
+  "fields": [
+    { "position": 0,  "name": "date" },
+    { "position": 1,  "name": "devid" },
+    { "position": 2,  "name": "msg" },
+    { "position": 3,  "name": "vcluster" },
+    { "position": 4,  "name": "level" },
+    { "position": 5,  "name": "tz" },
+    { "position": 6,  "name": "eventtime" },
+    { "position": 7,  "name": "type" },
+    { "position": 8,  "name": "hagroup" },
+    { "position": 9,  "name": "vd" },
+    { "position": 10, "name": "logdesc" },
+    { "position": 11, "name": "subtype" },
+    { "position": 12, "name": "devname" },
+    { "position": 13, "name": "logid" },
+    { "position": 14, "name": "time" },
+    { "position": 15, "name": "sn" },
+    { "position": 16, "name": "vendor",      "converttag": "set:'fortinet'" },
+    { "position": 17, "name": "model",       "converttag": "set:'fgt'" },
+    { "position": 18, "name": "logtype",     "converttag": "set:'event'" },
+    { "position": 19, "name": "paserversion", "converttag": "set:'v3'" },
+    { "position": 20, "name": "originallog", "converttag": "originalLog" },
+    { "position": 21, "name": "parserinfo",  "converttag": "set:'fortinetfgteventv3keyvalue'" },
+    { "position": 22, "name": "eqptype",     "converttag": "set:'fw'" }
+  ]
+}

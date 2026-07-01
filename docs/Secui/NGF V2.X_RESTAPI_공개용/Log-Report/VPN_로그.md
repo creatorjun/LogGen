@@ -1,0 +1,1404 @@
+VPN	로그	REST	API	문서
+
+https://{url}/api
+
+url:	required	(string)
+장비	IP
+
+로그	검색	시작
+
+주의)	이전에	현재	상태	또는	로그	검색	종료	후	검색	종료	REST	API가	호출되지	않았다면	검색	시작	전에	 /lr/log/{request_id}/end 	REST	API를	요청해	이전	검색	요청에	대한	리소스	정리가	필요합니다.
+
+/lr/log/start
+
+로그	추이	데이터	요청
+
+/lr/log/{request_id}/trend
+
+로그	검색	진행	상태	요청
+
+응답	결과	중	status	속성	값이	 DONE 일	때까지	반복	요청(폴링)을	해야	합니다.
+
+/lr/log/{request_id}/status
+
+로그	검색	결과	조회
+
+상태	조회(/{request_id}/status)	응답	결과에서	 searched_cnt 	속성	값이	0	일	경우	데이터가	없기	때문에	호출	될	필요	없습니다.
+
+/lr/log/{request_id}/page/{start}/to/{end}
+
+로그	다음	검색	수행
+
+POST
+
+GET
+
+GET
+
+GET
+
+/lr/log/{request_id}/status 	응답	결과에서	allow_next	속성값이	true	일	경우	수행	가능하고	다음	검색을	수행	한	후	 /lr/log/{request_id}/status 	REST	API를	반복	요청(폴링)을	해서	검색	상태를	재	조회해야	합니다.
+
+DELETE
+
+DELETE
+
+DELETE
+
+/lr/log/{request_id}/page/next
+
+로그	검색	중지
+
+/lr/log/{request_id}/stop
+
+로그	검색	종료
+
+주의)	재	검색	전,	즉,	 /lr/log/start 	REST	API	호출	전에	이전	request_id에	해당하는	검색	작업이	종료되지	않았다면	반드시	호출되어야	합니다.
+
+/lr/log/{request_id}/end
+
+로그	검색	시작
+
+POST
+
+/lr/log/start
+
+VPN	로그 	검색을	시작한다.
+
+Request
+
+Headers
+
+Authorization:	required	(string)
+API	Token
+로그인	후	응답에	포함된	 api_token 을	설정
+
+Example:
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept:	required	(string)
+Example:
+
+application/json
+
+Content-Type:	required	(string)
+Example:
+
+application/json
+
+Accept-Language:	(one	of	ko,	en	-	default:	ko)
+언어	설정
+
+필수가	아니며	요청	시	설정되지	않으면	로그인	시	사용된	언어로	설정됩니다.
+한국어:	ko,	영어:	en
+
+Example:
+
+ko
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+filters:	required	(array	of	필터)
+필터	정보	목록
+별첨으로	제공되는	로그	기능	별	컬럼	정의서	참고
+
+Items:	필터
+
+key:	required	(string)
+컬럼
+
+value:	required	(array	of	String)
+필터	값	목록
+숫자형식:	N	or	N1-N2	or	>N,	<N,	>=N,	<=N
+문자열
+
+is_not:	required	(one	of	true,	false)
+NOT	여부
+
+page_rows:	(integer)
+페이지	당	건수
+
+total_rows:	(integer)
+검색	건수
+
+print_object_name:	(one	of	true,	false)
+객체명	출력	여부
+
+columns:	required	(array	of	String)
+컬럼	목록
+별첨으로	제공되는	로그	기능	별	컬럼	정의서	참고
+
+stime:	required	(string)
+시작	시간
+
+Example:
+
+2020-05-18	07:28:51
+
+etime:	required	(string)
+종료	시간
+
+Example:
+
+2020-05-18	13:28:51
+
+order_by:	required	(one	of	asc,	desc)
+정렬	기준
+asc:	오름차순,	desc:	내림차순
+
+log_type:	required	(string)
+로그	검색	타입(기능	별	ID)
+
+ipsec_event :	IPSec	VPN	이벤트	로그
+ipsec_line_use_cnt :	IPSec	VPN	회선	사용	현황	카운트	로그
+ipsec_tunnel_id_cnt :	IPSec	VPN	터널	ID	별	사용	현황	로그
+groupvpn_event :	Group	VPN	이벤트	로그
+groupvpn_tunnel_id_cnt :	Group	VPN	터널	ID	별	사용	현황	로그
+sslvpn_session :	SSL	VPN	세션	로그
+sslvpn_user_auth :	SSL	VPN	사용자	인증	로그
+sslvpn_cert_issue :	SSL	VPN	인증서	발급	로그
+sslvpn_client_resource :	SSL	VPN	클라이언트	자원	로그
+
+Example:
+
+//	예)	IPSec	VPN	이벤트	로그
+{
+		"log_type":	"ipsec_event",
+		"stime":	"2020-05-01	00:00:00",
+		"etime":	"2020-05-31	23:59:59",
+		"total_rows":	1000,
+		"page_rows":	30,
+		"order_by":	"desc",
+		"filters":	[],
+		"print_object_name":	false,
+		"columns":	[
+				"time",
+				"mach_id",
+				"tunnel_id",
+				"remote_gw",
+				"action",
+				"level",
+				"message"
+		]
+}
+
+Response
+
+HTTP	status	code	200
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+result:	required	(object)
+request_id:	required	(string)
+요청	ID
+검색	라이프사이클	전반에	사용됩니다.
+
+Example:
+
+{
+		"code":	"ok",
+		"result":	{
+				"request_id":	"00001220-005344"
+		}
+}
+
+HTTP	status	code	400
+
+잘못된	요청 (BAD	REQUEST)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"50101",
+		"dev_t":	"System	API	Error",
+		"message":	"Wrong	value.	(columns	:	'pid')"
+}
+
+HTTP	status	code	401
+
+인증	또는	인가되지	않음 (UNAUTHORIZED)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+//	로그인	필요
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+//	(재)로그인	필요
+{
+		"code":	"94014",
+		"dev_t":	"Authentication	Error",
+		"message":	"세션이	만료되어	재로그인이	필요합니다."
+}
+
+//	권한이	필요
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP	status	code	404
+
+리소스를	찾을	수	없음 (NOT	FOUND)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"50007",
+		"dev_t":	"System	API	Error",
+		"message":	"존재하지	않는	리소스입니다."
+}
+
+로그	추이	데이터	요청
+
+GET
+
+/lr/log/{request_id}/trend
+
+VPN	로그 	추이	데이터를	조회한다.
+
+Request
+
+URI	Parameters
+
+request_id:	required	(string)
+조회	시작	시	응답에	포함된	 요청	ID
+
+Headers
+
+Authorization:	required	(string)
+API	Token
+로그인	후	응답에	포함된	 api_token 을	설정
+
+Example:
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept:	required	(string)
+Example:
+
+application/json
+
+Content-Type:	required	(string)
+Example:
+
+application/json
+
+Accept-Language:	(one	of	ko,	en	-	default:	ko)
+언어	설정
+
+필수가	아니며	요청	시	설정되지	않으면	로그인	시	사용된	언어로	설정됩니다.
+한국어:	ko,	영어:	en
+
+Example:
+
+ko
+
+Response
+
+HTTP	status	code	200
+
+VPN	로그 	추이	데이터	결과	조회	성공
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+result:	required	(object)
+trend:	required	(array	of	)
+추이
+형식:	[시작	시간,	종료	시간,	수치]
+
+Example:
+
+[
+		["2020-05-18	07:10:00",	"2020-05-18	07:19:59",	814456]
+]
+
+unit_time:	required	(object)
+
+단위
+
+unit:	required	(string)
+단위(ex:	minutes)
+
+value:	required	(integer)
+수치
+
+Example:
+
+{
+		"code":	"ok",
+		"result":	{
+				"trend":	[
+						[
+								"2020-05-18	07:10:00",
+								"2020-05-18	07:19:59",
+								814456
+						],
+						[
+								"2020-05-18	07:20:00",
+								"2020-05-18	07:29:59",
+								1058165
+						]
+				],
+				"unit_time":	{
+						"value":	10,
+						"unit":	"minutes"
+				}
+		}
+}
+
+HTTP	status	code	401
+
+인증	또는	인가되지	않음 (UNAUTHORIZED)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+//	로그인	필요
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+//	(재)로그인	필요
+{
+		"code":	"94014",
+		"dev_t":	"Authentication	Error",
+		"message":	"세션이	만료되어	재로그인이	필요합니다."
+}
+
+//	권한이	필요
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP	status	code	404
+
+리소스를	찾을	수	없음 (NOT	FOUND)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"50007",
+		"dev_t":	"System	API	Error",
+		"message":	"존재하지	않는	리소스입니다."
+}
+
+로그	검색	진행	상태	요청
+
+GET
+
+/lr/log/{request_id}/status
+
+VPN	로그 	검색	진행	상태를	조회한다.
+
+Request
+
+URI	Parameters
+
+request_id:	required	(string)
+조회	시작	시	응답에	포함된	 요청	ID
+
+Headers
+
+Authorization:	required	(string)
+API	Token
+로그인	후	응답에	포함된	 api_token 을	설정
+
+Example:
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept:	required	(string)
+Example:
+
+application/json
+
+Content-Type:	required	(string)
+Example:
+
+application/json
+
+Accept-Language:	(one	of	ko,	en	-	default:	ko)
+언어	설정
+
+필수가	아니며	요청	시	설정되지	않으면	로그인	시	사용된	언어로	설정됩니다.
+한국어:	ko,	영어:	en
+
+Example:
+
+ko
+
+Response
+
+HTTP	status	code	200
+
+VPN	로그 	검색	진행	상태	요청	성공
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+status:	required	(string)
+검색	진행	상태
+
+INIT :	초기	단계
+IN_PROGRESS :	검색	진행	단계
+DONE :	검색	완료	단계
+
+status가	DONE	일	경우	더	이상	상태	요청	REST	API를	호출하지	않아도	됩니다.
+
+progress:	required	(integer	-	minimum:	0	-	maximum:	100)
+검색	진행률(0~100)
+
+searched_cnt:	required	(integer)
+검색	완료	건수
+
+allow_next:	required	(one	of	true,	false)
+다음(next)	검색	가능	여부
+true:	'/next'	API	호출	가능,	false:	'/next'	API	호출	불가능
+
+Example:
+
+{
+		"code":	"ok",
+		"result":	{
+				"status":	"DONE",
+				"progress":	100,
+				"searched_cnt":	576,
+				"allow_next":	false
+		}
+}
+
+HTTP	status	code	401
+
+인증	또는	인가되지	않음 (UNAUTHORIZED)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+//	로그인	필요
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+//	(재)로그인	필요
+{
+		"code":	"94014",
+		"dev_t":	"Authentication	Error",
+		"message":	"세션이	만료되어	재로그인이	필요합니다."
+}
+
+//	권한이	필요
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP	status	code	404
+
+리소스를	찾을	수	없음 (NOT	FOUND)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"50007",
+		"dev_t":	"System	API	Error",
+		"message":	"존재하지	않는	리소스입니다."
+}
+
+로그	검색	결과	조회
+
+GET
+
+/lr/log/{request_id}/page/{start}/to/{end}
+
+VPN	로그 	검색	결과를	조회한다.
+
+Request
+
+URI	Parameters
+
+request_id:	required	(string)
+조회	시작	시	응답에	포함된	 요청	ID
+
+start:	required	(integer)
+검색	시작	인덱스
+결과	데이터에	대한	인덱스를	기준으로	합니다.
+
+end:	required	(integer)
+검색	종료	인덱스
+결과	데이터에	대한	인덱스를	기준으로	합니다.
+
+Headers
+
+Authorization:	required	(string)
+API	Token
+로그인	후	응답에	포함된	 api_token 을	설정
+
+Example:
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept:	required	(string)
+Example:
+
+application/json
+
+Content-Type:	required	(string)
+Example:
+
+application/json
+
+Accept-Language:	(one	of	ko,	en	-	default:	ko)
+언어	설정
+
+필수가	아니며	요청	시	설정되지	않으면	로그인	시	사용된	언어로	설정됩니다.
+한국어:	ko,	영어:	en
+
+Example:
+
+ko
+
+Response
+
+HTTP	status	code	200
+
+VPN	로그 	검색	결과	조회	성공
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+result:	required	(object)
+별첨으로	제공되는	로그	기능	별	컬럼	정의서	참고
+
+Example:
+
+//	예)	IPSec	VPN	이벤트	로그
+{
+		"code":	"ok",
+		"result":	{
+				"log":	[
+						{
+								"time":	"2020-05-15	12:43:52",
+								"mach_id":	"Unknown(12)",
+								"tunnel_id":	"[RANDOM	STRING]	C",
+								"remote_gw":	"192.168.43.109",
+								"action":	"ESTABLISHED",
+								"level":	"DEBUG",
+								"message":	"[RANDOM	STRING]	V"
+						}
+				]
+		}
+}
+
+//	예)	IPSec	VPN	회선	사용	현황	카운트	로그
+{
+		"code":	"ok",
+		"result":	{
+				"log":	[
+						{
+								"time":	"2020-05-15	12:43:52",
+								"mach_id":	"Unknown(12)",
+								"circuit_ip":	"192.168.184.246",
+								"if_name":	"eth2",
+								"tx_speed":	3863,
+								"rx_speed":	2149,
+								"tx_bytes":	1388,
+								"rx_bytes":	4395,
+								"tx_usage_ratio":	26721.64,
+								"rx_usage_ratio":	67318.25,
+								"failure_period":	16621,
+								"term_failure_period":	16687,
+								"status":	"Normal",
+								"rtt":	23737.3,
+								"loss_ratio":	15895.63
+						}
+				]
+		}
+}
+
+//	예)	IPSec	VPN	터널	ID	별	사용	현황	로그
+{
+		"code":	"ok",
+		"result":	{
+				"log":	[
+						{
+								"time":	"2020-05-16	11:23:14",
+								"mach_id":	"Unknown(191679593)",
+								"tunnel_id":	"[RANDOM	STRING]	F",
+								"status":	"Normal",
+								"enc_packets":	25062508,
+								"enc_bytes":	52453478,
+								"dec_packets":	92419970,
+								"dec_bytes":	279420,
+
+								"crypto_usage":	21957.36
+						}
+				]
+		}
+}
+
+//	예)	Group	VPN	이벤트	로그
+{
+		"code":	"ok",
+		"result":	{
+				"log":	[
+						{
+								"time":	"2020-05-15	12:43:54",
+								"mach_id":	"Unknown(12)",
+								"tunnel_id":	"[RANDOM	STRING]	A",
+								"remote_gw":	"192.168.189.30",
+								"action":	"Unknown(2)",
+								"level":	"CRITICAL",
+								"message":	"[RANDOM	STRING]	I"
+						}
+				]
+		}
+}
+
+//	예)	Group	VPN	터널	ID	별	사용	현황	로그
+{
+		"code":	"ok",
+		"result":	{
+				"log":	[
+						{
+								"time":	"2020-05-16	11:19:16",
+								"mach_id":	"Unknown(191679593)",
+								"tunnel_id":	"[RANDOM	STRING]	Z",
+								"status":	"Abnormal",
+								"enc_packets":	60925696,
+								"enc_bytes":	53782865,
+								"dec_packets":	35508614,
+								"dec_bytes":	4393690,
+								"crypto_usage":	23170.94
+						}
+				]
+		}
+}
+
+//	예)	SSL	VPN	세션	로그
+{
+		"code":	"ok",
+		"result":	{
+				"log":	[
+						{
+								"time":	"2020-05-15	12:43:52",
+								"mach_id":	"Unknown(12)",
+								"user_id":	"user-1762",
+								"src_ip":	"11.2.17.107",
+								"src_port":	59702,
+								"dst_ip":	"10.1.128.25",
+								"protocol":	"IPv6-Frag",
+								"dst_port":	880,
+								"in_bytes":	128415,
+								"out_bytes":	44161,
+								"tot_bytes":	172576
+						}
+				]
+		}
+}
+
+//	예)	SSL	VPN	사용자	인증	로그
+{
+		"code":	"ok",
+		"result":	{
+				"log":	[
+						{
+								"time":	"2020-05-15	12:43:54",
+								"mach_id":	"Unknown(12)",
+								"user_id":	"user-1548",
+								"src_ip":	"192.168.160.203",
+								"os_type":	"iOS",
+								"rent_ip":	"192.168.27.231",
+								"group_name":	"[RANDOM	STRING]	E",
+								"auth_policy_name":	"[RANDOM	STRING]	Z",
+								"auth_type":	"AD",
+								"connect_uri":	"[RANDOM	STRING]	Z",
+								"status":	"User	account	locked	-	Too	many	login	failure",
+								"auth_status":	"Failed	to	revoke	private	certificate",
+								"duration":	"",
+								"reason":	"Block	-	Exceeded	max	number	of	password	failure",
+								"failure_cnt":	104
+						}
+				]
+		}
+}
+
+//	예)	SSL	VPN	인증서	발급	로그
+{
+		"code":	"ok",
+		"result":	{
+				"log":	[
+						{
+								"time":	"2020-05-15	12:43:52",
+
+								"mach_id":	"Unknown(12)",
+								"user_id":	"user-8547",
+								"src_ip":	"192.168.248.204",
+								"auth_type":	"GPKI",
+								"use":	"Use",
+								"cert_cn":	"[RANDOM	STRING]	T",
+								"f_print":	"[RANDOM	STRING]	J",
+								"cert_expire":	"2020-05-15	12:43:52",
+								"recent_regist":	"2020-05-15	12:43:52"
+						}
+				]
+		}
+}
+
+//	예)	SSL	VPN	클라이언트	자원	로그
+{
+		"code":	"ok",
+		"result":	{
+				"log":	[
+						{
+								"time":	"2020-05-15	12:43:52",
+								"mach_id":	"Unknown(12)",
+								"user_id":	"user-2848",
+								"src_ip":	"192.168.12.251",
+								"rent_ip":	"192.168.241.255",
+								"os_type":	"Linux",
+								"cpu_info":	"[RANDOM	STRING]	P",
+								"mem_info":	"[RANDOM	STRING]	R",
+								"os_info":	"[RANDOM	STRING]	J",
+								"mac_info":	"[RANDOM	STRING]	W",
+								"login_status":	"Login"
+						}
+				]
+		}
+}
+
+HTTP	status	code	401
+
+인증	또는	인가되지	않음 (UNAUTHORIZED)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+//	로그인	필요
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+//	(재)로그인	필요
+{
+		"code":	"94014",
+		"dev_t":	"Authentication	Error",
+		"message":	"세션이	만료되어	재로그인이	필요합니다."
+}
+
+//	권한이	필요
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP	status	code	404
+
+리소스를	찾을	수	없음 (NOT	FOUND)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"50007",
+		"dev_t":	"System	API	Error",
+		"message":	"존재하지	않는	리소스입니다."
+}
+
+로그	다음	검색	수행
+
+DELETE
+
+/lr/log/{request_id}/page/next
+
+VPN	로그 	다음	검색을	수행한다.
+
+Request
+
+URI	Parameters
+
+request_id:	required	(string)
+조회	시작	시	응답에	포함된	 요청	ID
+
+Headers
+
+Authorization:	required	(string)
+API	Token
+로그인	후	응답에	포함된	 api_token 을	설정
+
+Example:
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept:	required	(string)
+Example:
+
+application/json
+
+Content-Type:	required	(string)
+Example:
+
+application/json
+
+Accept-Language:	(one	of	ko,	en	-	default:	ko)
+언어	설정
+
+필수가	아니며	요청	시	설정되지	않으면	로그인	시	사용된	언어로	설정됩니다.
+한국어:	ko,	영어:	en
+
+Example:
+
+ko
+
+Response
+
+HTTP	status	code	200
+
+VPN	로그 	다음	검색	성공
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+result:	required	(object)
+Example:
+
+{
+		"code":	"ok",
+		"result":	{
+		}
+}
+
+HTTP	status	code	401
+
+인증	또는	인가되지	않음 (UNAUTHORIZED)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+//	로그인	필요
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+//	(재)로그인	필요
+{
+		"code":	"94014",
+		"dev_t":	"Authentication	Error",
+		"message":	"세션이	만료되어	재로그인이	필요합니다."
+}
+
+//	권한이	필요
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP	status	code	404
+
+리소스를	찾을	수	없음 (NOT	FOUND)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"50007",
+		"dev_t":	"System	API	Error",
+		"message":	"존재하지	않는	리소스입니다."
+}
+
+로그	검색	중지
+
+DELETE
+
+/lr/log/{request_id}/stop
+
+VPN	로그 	진행	중인	검색을	중지한다.
+
+Request
+
+URI	Parameters
+
+request_id:	required	(string)
+조회	시작	시	응답에	포함된	 요청	ID
+
+Headers
+
+Authorization:	required	(string)
+API	Token
+로그인	후	응답에	포함된	 api_token 을	설정
+
+Example:
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept:	required	(string)
+Example:
+
+application/json
+
+Content-Type:	required	(string)
+Example:
+
+application/json
+
+Accept-Language:	(one	of	ko,	en	-	default:	ko)
+언어	설정
+
+필수가	아니며	요청	시	설정되지	않으면	로그인	시	사용된	언어로	설정됩니다.
+한국어:	ko,	영어:	en
+
+Example:
+
+ko
+
+Response
+
+HTTP	status	code	200
+
+VPN	로그 	검색	중지	성공
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+result:	required	(object)
+Example:
+
+{
+		"code":	"ok",
+		"result":	{
+		}
+}
+
+HTTP	status	code	401
+
+인증	또는	인가되지	않음 (UNAUTHORIZED)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+//	로그인	필요
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+//	(재)로그인	필요
+{
+		"code":	"94014",
+		"dev_t":	"Authentication	Error",
+		"message":	"세션이	만료되어	재로그인이	필요합니다."
+}
+
+//	권한이	필요
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP	status	code	404
+
+리소스를	찾을	수	없음 (NOT	FOUND)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"50007",
+		"dev_t":	"System	API	Error",
+		"message":	"존재하지	않는	리소스입니다."
+}
+
+로그	검색	종료
+
+DELETE
+
+/lr/log/{request_id}/end
+
+VPN	로그 	검색	종료	후	리소스를	해제한다.
+
+Request
+
+URI	Parameters
+
+request_id:	required	(string)
+조회	시작	시	응답에	포함된	 요청	ID
+
+Headers
+
+Authorization:	required	(string)
+API	Token
+로그인	후	응답에	포함된	 api_token 을	설정
+
+Example:
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept:	required	(string)
+Example:
+
+application/json
+
+Content-Type:	required	(string)
+Example:
+
+application/json
+
+Accept-Language:	(one	of	ko,	en	-	default:	ko)
+언어	설정
+
+필수가	아니며	요청	시	설정되지	않으면	로그인	시	사용된	언어로	설정됩니다.
+한국어:	ko,	영어:	en
+
+Example:
+
+ko
+
+Response
+
+HTTP	status	code	200
+
+VPN	로그 	검색	종료	성공
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+result:	required	(object)
+Example:
+
+{
+		"code":	"ok",
+		"result":	{
+		}
+}
+
+HTTP	status	code	401
+
+인증	또는	인가되지	않음 (UNAUTHORIZED)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+//	로그인	필요
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+//	(재)로그인	필요
+{
+		"code":	"94014",
+		"dev_t":	"Authentication	Error",
+		"message":	"세션이	만료되어	재로그인이	필요합니다."
+}
+
+//	권한이	필요
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP	status	code	404
+
+리소스를	찾을	수	없음 (NOT	FOUND)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"50007",
+		"dev_t":	"System	API	Error",
+		"message":	"존재하지	않는	리소스입니다."
+}
+

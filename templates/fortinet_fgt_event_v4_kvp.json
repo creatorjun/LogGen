@@ -1,0 +1,40 @@
+{
+  "id": "fortinet_fgt_event_v4_kvp",
+  "vendor": "fortinet",
+  "model": "fgt",
+  "logtype": "event",
+  "version": "v4",
+  "format": "KeyValue2",
+  "description": "Fortinet FortiGate Event v4 KeyValue2 - system up with ISO8601 date",
+  "sample": "date=2025-08-05T10:33:35,time=2025-08-05T10:33:35,devname=HQ-FGT,deviceid=FGT1KD3Z16000000,logid=1059028704,type=event,subtype=system,pri=notice,msg=System is up,src=192.168.1.53,dst=104.18.12.123,srcport=8080,dstport=1024,proto=ARP,action=ALLOW",
+  "parser": {
+    "parserkey": "parserkey",
+    "type": 1,
+    "separator": "KeyValue2",
+    "arrlength": 15
+  },
+  "fields": [
+    { "position": 0,  "name": "date" },
+    { "position": 1,  "name": "msg" },
+    { "position": 2,  "name": "logid" },
+    { "position": 3,  "name": "deviceid" },
+    { "position": 4,  "name": "dstnip",      "orgname": "dst" },
+    { "position": 5,  "name": "srcip",       "orgname": "src" },
+    { "position": 6,  "name": "pri" },
+    { "position": 7,  "name": "type" },
+    { "position": 8,  "name": "srcport" },
+    { "position": 9,  "name": "subtype" },
+    { "position": 10, "name": "prtc",        "orgname": "proto", "converttag": "toLowerCase" },
+    { "position": 11, "name": "dstport" },
+    { "position": 12, "name": "action",      "converttag": "toLowerCase" },
+    { "position": 13, "name": "devname" },
+    { "position": 14, "name": "time",        "converttag": "replace:'T',''replaceAll:',',''" },
+    { "position": 15, "name": "vendor",      "converttag": "set:'fortinet'" },
+    { "position": 16, "name": "model",       "converttag": "set:'fgt'" },
+    { "position": 17, "name": "logtype",     "converttag": "set:'event'" },
+    { "position": 18, "name": "paserversion", "converttag": "set:'v4'" },
+    { "position": 19, "name": "originallog", "converttag": "originalLog" },
+    { "position": 20, "name": "parserinfo",  "converttag": "set:'fortinetfgteventv4keyvalue'" },
+    { "position": 21, "name": "eqptype",     "converttag": "set:'fw'" }
+  ]
+}

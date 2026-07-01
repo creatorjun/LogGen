@@ -1,0 +1,15 @@
+{
+  "device": "Juniper Networks NetScreen InfosecFW",
+  "vendor": "Juniper Networks",
+  "format": {
+    "type": "KVP",
+    "raw": "InfosecFW1 NetScreen deviceid=InfosecFW1 Root:system-notification-00257(traffic) starttime=\"$DATE\" duration=$DURATION policyid=$POLICY_ID service=icmp proto=1 src zone=Trust dst zone=Untrust action=$ACTION sent=102 rcvd=102 src=$SRC_IP dst=$DST_IP icmp type=0 icmp code=0 src-xlated ip=$SRC_IP dst-xlated ip=$DST_IP sessionid=$CONN_ID reason=Close - RESP"
+  },
+  "xml": {
+    "raw": "<Policy>\n  <Parser parser_key=\"{@parser_key}\" type=\"1\" separator=\"Key&amp;Value\" arr_length=\"17\">\n    <Field position=\"0\"  name=\"reason\" />\n    <Field position=\"1\"  name=\"code\" />\n    <Field position=\"2\"  name=\"device_id\" />\n    <Field position=\"3\"  name=\"policyid\" />\n    <Field position=\"4\"  name=\"dstn_ip\"       org_name=\"dst\" />\n    <Field position=\"5\"  name=\"src_ip\"        org_name=\"src\" />\n    <Field position=\"6\"  name=\"ip\" />\n    <Field position=\"7\"  name=\"session_id\" />\n    <Field position=\"8\"  name=\"rcvd\" />\n    <Field position=\"9\"  name=\"type\" />\n    <Field position=\"10\" name=\"sent\" />\n    <Field position=\"11\" name=\"duration\" />\n    <Field position=\"12\" name=\"start_time\" />\n    <Field position=\"13\" name=\"zone\" />\n    <Field position=\"14\" name=\"service\" />\n    <Field position=\"15\" name=\"prtc\"          org_name=\"proto\" />\n    <Field position=\"16\" name=\"action\" />\n    <Field position=\"17\" name=\"logtype\"       convert_tag=\"[[@set(&apos;traffic&apos;)]]\" />\n    <Field position=\"18\" name=\"vendor\"        convert_tag=\"[[@set(&apos;junipernetworks&apos;)]]\" />\n    <Field position=\"19\" name=\"eqp_type\"      convert_tag=\"[[@set(&apos;fw&apos;)]]\" />\n    <Field position=\"20\" name=\"parser_version\" convert_tag=\"[[@set(&apos;v2&apos;)]]\" />\n    <Field position=\"21\" name=\"original_log\"  convert_tag=\"[[@originalLog()]]\" />\n    <Field position=\"22\" name=\"parser_info\"   convert_tag=\"[[@set(&apos;[Juniper]_netscreen_traffic_v2_keyvalue&apos;)]]\" />\n  </Parser>\n</Policy>"
+  },
+  "scenarios": [
+    { "attackName": "Close - RESP", "weight": 60 },
+    { "attackName": "Close - AGE",  "weight": 40 }
+  ]
+}

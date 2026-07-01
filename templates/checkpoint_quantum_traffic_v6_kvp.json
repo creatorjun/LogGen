@@ -1,0 +1,17 @@
+{
+  "device": "CheckPoint Quantum Gateway",
+  "vendor": "CheckPoint",
+  "format": {
+    "type": "KVP",
+    "raw": "orig=10.10.2.52 time=2017-11-08_152519 action=accept src=10.51.7.193 sport=50932 dst=117.52.128.233 service=80 proto=tcp loc=5738841 sensorip=203.242.35.216"
+  },
+  "xml": {
+    "raw": "<Policy>\n  <Parser parser_key=\"{@parser_key}\" type=\"1\" separator=\"1,15\" arr_length=\"10\">\n    <Field position=\"0\"  name=\"original_ip\"     convert_tag=\"[[@regexGet(&apos;.*&apos;)]]\" />\n    <Field position=\"1\"  name=\"log_dt\"           convert_tag=\"[[@date(&apos;yyyy-MM-dd_HHmmss&apos;,&apos;yyyyMMddHHmmss&apos;)]]\" />\n    <Field position=\"2\"  name=\"action\" />\n    <Field position=\"3\"  name=\"src_ip\"            org_name=\"src\" />\n    <Field position=\"4\"  name=\"src_port\"          org_name=\"sport\" />\n    <Field position=\"5\"  name=\"dstn_ip\"           org_name=\"dst\" />\n    <Field position=\"6\"  name=\"dstn_port\"         org_name=\"service\" />\n    <Field position=\"7\"  name=\"prtc\"              org_name=\"proto\" />\n    <Field position=\"8\"  name=\"location\"          org_name=\"loc\" />\n    <Field position=\"9\"  name=\"sensor_ip\"         org_name=\"sensorip\" />\n    <Field position=\"10\" name=\"vendor\"            convert_tag=\"[[@set(&apos;checkpoint&apos;)]]\" />\n    <Field position=\"11\" name=\"model\"             convert_tag=\"[[@set(&apos;quantum&apos;)]]\" />\n    <Field position=\"12\" name=\"logtype\"           convert_tag=\"[[@set(&apos;traffic&apos;)]]\" />\n    <Field position=\"13\" name=\"parser_version\"    convert_tag=\"[[@set(&apos;v6&apos;)]]\" />\n    <Field position=\"14\" name=\"eqp_type\"          convert_tag=\"[[@set(&apos;gw&apos;)]]\" />\n    <Field position=\"15\" name=\"parser_info\"       convert_tag=\"[[@set(&apos;[CheckPoint]_quantum_traffic_v6_keyvalue&apos;)]]\" />\n    <Field position=\"16\" name=\"original_log\"      convert_tag=\"[[@originalLog()]]\" />\n  </Parser>\n</Policy>"
+  },
+  "scenarios": [
+    {
+      "attackName": "HTTP Traffic Accept",
+      "weight": 100
+    }
+  ]
+}

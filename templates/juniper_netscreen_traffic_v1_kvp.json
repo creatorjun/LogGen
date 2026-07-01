@@ -1,0 +1,15 @@
+{
+  "device": "Juniper Networks NetScreen",
+  "vendor": "Juniper Networks",
+  "format": {
+    "type": "KVP",
+    "raw": "CNB NetScreen deviceid=CNB Root:system-notification-00257(traffic) starttime=\"$DATE\" duration=$DURATION policyid=$POLICY_ID service=$SERVICE proto=$PROTO src zone=V1-Untrust dst zone=V1-Trust action=$ACTION sent=0 rcvd=0 src=$SRC_IP dst=$DST_IP srcport=$SRC_PORT dstport=$DST_PORT sessionid=0"
+  },
+  "xml": {
+    "raw": "<Policy>\n  <Parser parser_key=\"{@parser_key}\" type=\"1\" separator=\"Key&amp;Value\" arr_length=\"15\">\n    <Field position=\"0\"  name=\"device_id\" />\n    <Field position=\"1\"  name=\"policyid\" />\n    <Field position=\"2\"  name=\"dstn_ip\"       org_name=\"dst\" />\n    <Field position=\"3\"  name=\"src_ip\"        org_name=\"src\" />\n    <Field position=\"4\"  name=\"session_id\" />\n    <Field position=\"5\"  name=\"rcvd\" />\n    <Field position=\"6\"  name=\"sent\" />\n    <Field position=\"7\"  name=\"duration\" />\n    <Field position=\"8\"  name=\"src_port\" />\n    <Field position=\"9\"  name=\"start_time\" />\n    <Field position=\"10\" name=\"zone\" />\n    <Field position=\"11\" name=\"service\" />\n    <Field position=\"12\" name=\"prtc\"          org_name=\"proto\" />\n    <Field position=\"13\" name=\"dstn_port\"     org_name=\"dstport\" />\n    <Field position=\"14\" name=\"action\" />\n    <Field position=\"15\" name=\"logtype\"       convert_tag=\"[[@set(&apos;traffic&apos;)]]\" />\n    <Field position=\"16\" name=\"model\"         convert_tag=\"[[@set(&apos;netscreen&apos;)]]\" />\n    <Field position=\"17\" name=\"vendor\"        convert_tag=\"[[@set(&apos;junipernetworks&apos;)]]\" />\n    <Field position=\"18\" name=\"eqp_type\"      convert_tag=\"[[@set(&apos;fw&apos;)]]\" />\n    <Field position=\"19\" name=\"parser_version\" convert_tag=\"[[@set(&apos;v1&apos;)]]\" />\n    <Field position=\"20\" name=\"original_log\"  convert_tag=\"[[@originalLog()]]\" />\n    <Field position=\"21\" name=\"parser_info\"   convert_tag=\"[[@set(&apos;[Juniper]_netscreen_traffic_v1_keyvalue&apos;)]]\" />\n  </Parser>\n</Policy>"
+  },
+  "scenarios": [
+    { "attackName": "Deny",   "weight": 50 },
+    { "attackName": "Permit", "weight": 50 }
+  ]
+}

@@ -1,0 +1,5 @@
+// src/resources.rc
+// Windows-only resource file. Compiled only when WIN32 is defined (see CMakeLists.txt).
+// Contains application icon embedded into the executable.
+// This file is intentionally excluded on Linux and macOS builds.
+1 ICON "../assets/icon/LogGen.ico"

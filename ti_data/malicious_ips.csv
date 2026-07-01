@@ -1,0 +1,126 @@
+ip,country_code,country_name,category,severity,description,source
+1.180.216.180,CN,China,SSH Brute Force,HIGH,SSH brute force botnet,AbuseIPDB
+1.180.216.181,CN,China,SSH Brute Force,HIGH,SSH brute force botnet,AbuseIPDB
+14.0.0.120,CN,China,Port Scan,MEDIUM,Reconnaissance port scanner,FireHOL
+14.18.56.100,CN,China,SQL Injection,HIGH,Web application attack,AbuseIPDB
+27.9.200.90,CN,China,DDoS,CRITICAL,DDoS amplification source,FireHOL
+36.110.228.254,CN,China,Malware C2,CRITICAL,Botnet C&C server,ThreatFox
+36.155.132.55,CN,China,SQL Injection,HIGH,Web application attack SQLi,AbuseIPDB
+39.106.12.1,CN,China,Malware C2,CRITICAL,Known malware distribution,ThreatFox
+42.51.192.3,CN,China,SSH Brute Force,HIGH,SSH credential stuffing,AbuseIPDB
+45.33.49.196,CN,China,XSS,MEDIUM,Cross-site scripting attempt,AbuseIPDB
+58.49.58.58,CN,China,Port Scan,MEDIUM,TCP SYN scan,FireHOL
+59.63.188.19,CN,China,SSH Brute Force,HIGH,SSH brute force attack,AbuseIPDB
+60.22.168.52,CN,China,DDoS,CRITICAL,DDoS HTTP flood,FireHOL
+61.177.172.100,CN,China,SQL Injection,HIGH,SQLi web scanner,AbuseIPDB
+103.27.61.156,CN,China,Malware C2,CRITICAL,APT C2 infrastructure,ThreatFox
+103.99.0.122,CN,China,Phishing,HIGH,Phishing site host,AbuseIPDB
+106.12.12.12,CN,China,Port Scan,MEDIUM,Mass port scanning,FireHOL
+110.249.201.10,CN,China,SSH Brute Force,HIGH,SSH dictionary attack,AbuseIPDB
+111.7.100.3,CN,China,File Upload Attack,HIGH,Malicious file upload attempt,AbuseIPDB
+112.85.42.185,CN,China,SQL Injection,HIGH,Automated SQL injection tool,AbuseIPDB
+116.31.116.7,CN,China,DDoS,CRITICAL,Reflected DDoS amplifier,FireHOL
+118.24.150.200,CN,China,Malware C2,CRITICAL,Malware dropper C2,ThreatFox
+120.92.12.1,CN,China,Exploit,CRITICAL,Exploit kit landing page,ThreatFox
+121.40.193.13,CN,China,Malware C2,CRITICAL,Botnet C&C,ThreatFox
+123.58.182.100,CN,China,SSH Brute Force,HIGH,SSH scan and brute force,AbuseIPDB
+124.156.13.1,CN,China,Port Scan,MEDIUM,Service discovery scan,FireHOL
+182.92.153.15,CN,China,RDP Brute Force,HIGH,RDP credential stuffing,AbuseIPDB
+183.36.179.7,CN,China,SSH Brute Force,CRITICAL,High-volume SSH brute force,AbuseIPDB
+193.37.254.1,CN,China,SQL Injection,HIGH,Automated SQLi scanner,AbuseIPDB
+202.101.192.1,CN,China,DDoS,CRITICAL,UDP flood source,FireHOL
+5.8.88.200,RU,Russia,Malware C2,CRITICAL,Ransomware C2 server,ThreatFox
+5.101.40.30,RU,Russia,RDP Brute Force,HIGH,RDP brute force,AbuseIPDB
+31.13.195.26,RU,Russia,Phishing,HIGH,Credential harvesting page,AbuseIPDB
+37.9.13.250,RU,Russia,Malware C2,CRITICAL,Banking trojan C2,ThreatFox
+45.132.227.186,RU,Russia,SSH Brute Force,CRITICAL,High-frequency SSH attack,AbuseIPDB
+45.155.205.233,RU,Russia,Exploit,CRITICAL,Log4Shell exploit attempt,ThreatFox
+62.182.82.11,RU,Russia,RDP Brute Force,HIGH,RDP scanner and brute forcer,AbuseIPDB
+77.73.134.11,RU,Russia,DDoS,CRITICAL,DDoS botnet member,FireHOL
+78.40.108.142,RU,Russia,Malware C2,CRITICAL,Emotet C2 server,ThreatFox
+79.236.101.136,RU,Russia,SSH Brute Force,HIGH,Automated SSH attack,AbuseIPDB
+80.90.181.10,RU,Russia,Port Scan,MEDIUM,Internet-wide scanning,FireHOL
+85.93.88.165,RU,Russia,Exploit,CRITICAL,Apache Struts exploit,ThreatFox
+91.92.109.22,RU,Russia,Malware C2,CRITICAL,Trickbot C2,ThreatFox
+91.215.153.82,RU,Russia,RDP Brute Force,HIGH,RDP mass scan,AbuseIPDB
+92.118.39.100,RU,Russia,Phishing,HIGH,Spear phishing origin,AbuseIPDB
+94.102.49.190,RU,Russia,SQL Injection,HIGH,Automated web attack,AbuseIPDB
+176.65.139.233,RU,Russia,SSH Brute Force,CRITICAL,High-volume SSH scan,AbuseIPDB
+185.150.25.64,RU,Russia,Port Scan,HIGH,Aggressive port scanning,AbuseIPDB
+185.220.101.50,RU,Russia,Malware C2,CRITICAL,Tor exit + malware relay,ThreatFox
+194.165.16.100,RU,Russia,DDoS,CRITICAL,DDoS reflection amplifier,FireHOL
+175.45.176.1,KP,North Korea,Exploit,CRITICAL,State-sponsored APT exploit,ThreatFox
+175.45.176.2,KP,North Korea,Malware C2,CRITICAL,Lazarus Group C2,ThreatFox
+175.45.176.3,KP,North Korea,Malware C2,CRITICAL,APT38 infrastructure,ThreatFox
+175.45.176.4,KP,North Korea,Phishing,CRITICAL,Spear phishing campaign,ThreatFox
+175.45.176.5,KP,North Korea,Exploit,CRITICAL,0-day exploit delivery,ThreatFox
+210.52.109.22,KP,North Korea,Malware C2,CRITICAL,Nation-state malware C2,ThreatFox
+23.129.64.100,US,United States,Malware C2,CRITICAL,Tor relay + malware C2,ThreatFox
+45.79.19.196,US,United States,Port Scan,MEDIUM,Shodan-like mass scanner,FireHOL
+45.132.227.186,US,United States,DDoS,CRITICAL,Amplification DDoS source,FireHOL
+54.171.67.4,US,United States,Port Scan,MEDIUM,Cloud-based scanner,AbuseIPDB
+64.89.162.161,US,United States,SSH Brute Force,HIGH,Residential proxy SSH attack,AbuseIPDB
+64.236.200.228,US,United States,Phishing,HIGH,Phishing infrastructure,AbuseIPDB
+96.30.129.165,CA,Canada,SQL Injection,HIGH,Automated SQLi tool,AbuseIPDB
+104.21.0.100,US,United States,Malware C2,HIGH,CDN-hosted malware C2,ThreatFox
+109.105.210.58,US,United States,Port Scan,MEDIUM,VPN-based port scanner,AbuseIPDB
+136.144.42.165,US,United States,Exploit,HIGH,Web shell upload attempt,AbuseIPDB
+162.216.150.80,US,United States,SSH Brute Force,HIGH,SSH credential stuffing,AbuseIPDB
+185.251.19.34,US,United States,DDoS,CRITICAL,NTP amplification DDoS,FireHOL
+185.251.19.47,US,United States,DDoS,CRITICAL,DNS amplification DDoS,FireHOL
+45.142.212.100,NL,Netherlands,Malware C2,CRITICAL,Ransomware C2 hosted in NL,ThreatFox
+64.225.105.50,NL,Netherlands,SSH Brute Force,HIGH,VPS-based SSH attacker,AbuseIPDB
+176.65.139.50,NL,Netherlands,Port Scan,MEDIUM,Aggressive internet scanner,FireHOL
+185.165.29.10,NL,Netherlands,Phishing,HIGH,Phishing kit hosting,AbuseIPDB
+5.189.204.192,DE,Germany,SSH Brute Force,HIGH,Hetzner-hosted SSH attacker,AbuseIPDB
+69.5.169.13,DE,Germany,Port Scan,MEDIUM,Internet-wide scanner,AbuseIPDB
+79.236.101.100,DE,Germany,Malware C2,HIGH,Malware hosting server,ThreatFox
+85.214.67.203,DE,Germany,SQL Injection,HIGH,Automated SQLi,AbuseIPDB
+185.150.25.100,DE,Germany,SSH Brute Force,HIGH,SSH dictionary attack,AbuseIPDB
+177.53.148.11,BR,Brazil,RDP Brute Force,HIGH,RDP brute force campaign,AbuseIPDB
+179.97.100.100,BR,Brazil,SSH Brute Force,HIGH,SSH brute force,AbuseIPDB
+189.112.10.20,BR,Brazil,Port Scan,MEDIUM,Port scanning activity,FireHOL
+200.147.34.49,BR,Brazil,DDoS,HIGH,DDoS botnet participant,FireHOL
+103.76.128.100,IN,India,SSH Brute Force,HIGH,SSH credential attack,AbuseIPDB
+106.51.48.100,IN,India,SQL Injection,MEDIUM,Web application scan,AbuseIPDB
+115.242.10.55,IN,India,Port Scan,MEDIUM,TCP SYN scan,FireHOL
+117.217.200.10,IN,India,Phishing,HIGH,Phishing campaign source,AbuseIPDB
+2.178.22.5,IR,Iran,Exploit,CRITICAL,State-sponsored exploit attempt,ThreatFox
+5.160.218.100,IR,Iran,Malware C2,CRITICAL,APT33 C2 server,ThreatFox
+37.156.29.100,IR,Iran,SQL Injection,HIGH,Automated injection tool,AbuseIPDB
+78.109.23.10,IR,Iran,RDP Brute Force,HIGH,RDP mass scanning,AbuseIPDB
+116.110.212.137,VN,Vietnam,SSH Brute Force,CRITICAL,High-volume SSH scan,AbuseIPDB
+117.4.200.10,VN,Vietnam,Port Scan,MEDIUM,Service fingerprinting scan,FireHOL
+123.31.33.50,VN,Vietnam,SQL Injection,HIGH,SQLi automated tool,AbuseIPDB
+171.236.100.5,VN,Vietnam,DDoS,HIGH,DDoS botnet participant,FireHOL
+103.151.108.100,SG,Singapore,Malware C2,CRITICAL,Hosted malware distribution,ThreatFox
+128.199.190.100,SG,Singapore,SSH Brute Force,HIGH,VPS-based SSH attacker,AbuseIPDB
+165.22.60.100,SG,Singapore,Port Scan,MEDIUM,Cloud scanner,FireHOL
+193.37.32.58,SG,Singapore,DDoS,CRITICAL,DDoS reflection amplifier,AbuseIPDB
+51.75.200.10,FR,France,SSH Brute Force,HIGH,OVH-hosted SSH attacker,AbuseIPDB
+89.116.31.97,FR,France,Port Scan,MEDIUM,Mass internet scanner,AbuseIPDB
+91.121.100.50,FR,France,Malware C2,HIGH,Malware hosting,ThreatFox
+212.83.175.100,FR,France,Phishing,HIGH,Phishing infrastructure,AbuseIPDB
+45.61.139.100,UA,Ukraine,SQL Injection,HIGH,Automated SQL injection,AbuseIPDB
+91.193.119.100,UA,Ukraine,RDP Brute Force,HIGH,RDP credential stuffing,AbuseIPDB
+176.36.100.10,UA,Ukraine,Malware C2,CRITICAL,Malware C2 hosted in UA,ThreatFox
+194.28.172.100,UA,Ukraine,Port Scan,MEDIUM,Network reconnaissance,FireHOL
+103.28.248.100,ID,Indonesia,SSH Brute Force,HIGH,SSH brute force,AbuseIPDB
+114.121.100.5,ID,Indonesia,Port Scan,MEDIUM,Port scan activity,FireHOL
+140.213.100.10,ID,Indonesia,DDoS,HIGH,DDoS participant,FireHOL
+31.210.20.100,TR,Turkey,SQL Injection,HIGH,Web attack from TR,AbuseIPDB
+78.135.40.100,TR,Turkey,SSH Brute Force,HIGH,SSH attack,AbuseIPDB
+88.254.100.10,TR,Turkey,Phishing,HIGH,Phishing site,AbuseIPDB
+103.230.100.10,BD,Bangladesh,SSH Brute Force,MEDIUM,SSH brute force,AbuseIPDB
+103.240.100.5,BD,Bangladesh,Port Scan,LOW,Port scanning,FireHOL
+103.255.100.10,PK,Pakistan,Phishing,HIGH,Credential phishing,AbuseIPDB
+111.68.100.5,PK,Pakistan,SQL Injection,MEDIUM,Web application attack,AbuseIPDB
+41.58.100.10,NG,Nigeria,Phishing,HIGH,BEC phishing source,AbuseIPDB
+197.210.100.5,NG,Nigeria,Phishing,HIGH,Business email compromise,AbuseIPDB
+1.34.100.10,TW,Taiwan,SSH Brute Force,HIGH,SSH automated attack,AbuseIPDB
+61.230.100.5,TW,Taiwan,Port Scan,MEDIUM,TCP scan,FireHOL
+118.163.100.10,TW,Taiwan,SQL Injection,HIGH,Web application SQLi,AbuseIPDB
+65.21.153.102,FI,Finland,Port Scan,MEDIUM,Hetzner-FI mass scanner,AbuseIPDB
+95.216.100.10,FI,Finland,SSH Brute Force,HIGH,VPS SSH attacker,AbuseIPDB
+54.171.67.100,IE,Ireland,Port Scan,MEDIUM,AWS-IE scanner,AbuseIPDB
+52.17.100.10,IE,Ireland,Malware C2,HIGH,Cloud-hosted C2,ThreatFox

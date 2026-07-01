@@ -1,0 +1,101 @@
+팔로알토 API CURL 준비
+
+1. 키발급
+
+curl --location --request GET 'https://172.17.104.52/api/?type=keygen&user=eyecloudxoar&password=SecuLayer@2022'
+curl --location --request POST 'https://172.17.104.52/api/?type=keygen&user=eyecloudxoar&password=SecuLayer@2022'
+
+API_KEY : LUFRPT1tYkFJdkJrWVMwUHhoYnRSc01IaHZTOFcwR2M9SFRaVVFJOFRYRitubTk2c09RNzREa283UGEvZkxvMXJXaGhVWFBlZzg1cnpyTitGcWlGNU5UMTVKZVFDTjZ5Rg==
+
+2. Addresses 전체조회
+
+curl --location --request GET 'https://172.17.104.52/restapi/v9.1/Objects/Addresses?location=vsys&vsys=vsys1' \
+--header 'X-PAN-KEY: LUFRPT1tYkFJdkJrWVMwUHhoYnRSc01IaHZTOFcwR2M9SFRaVVFJOFRYRitubTk2c09RNzREa283UGEvZkxvMXJXaGhVWFBlZzg1cnpyTitGcWlGNU5UMTVKZVFDTjZ5Rg=='
+
+3. Addresses 개별조회
+
+curl --location --request GET 'https://172.17.104.52/restapi/v9.1/Objects/Addresses?location=vsys&vsys=vsys1&name=1.1.1.1_TEST_OBJECT' \
+--header 'X-PAN-KEY: LUFRPT1tYkFJdkJrWVMwUHhoYnRSc01IaHZTOFcwR2M9SFRaVVFJOFRYRitubTk2c09RNzREa283UGEvZkxvMXJXaGhVWFBlZzg1cnpyTitGcWlGNU5UMTVKZVFDTjZ5Rg=='
+
+4. Addresses 추가
+
+curl --location --request POST 'https://172.17.104.52/restapi/v9.1/Objects/Addresses?location=vsys&vsys=vsys1&name=4.4.4.4_TEST_OBJECT' \
+--header 'X-PAN-KEY: LUFRPT1kVzBIYlJsNHFxODN1UG5ubDhDTWE2a0lJc2c9SFRaVVFJOFRYRitubTk2c09RNzREa283UGEvZkxvMXJXaGhVWFBlZzg1cnlnL3MrbjYxSERpZkRWQ0x4ZWZYdw==' \
+--data-raw '{
+  "entry": [
+            {
+                "@name": "4.4.4.4_TEST_OBJECT",
+                "@location": "vsys",
+                "@vsys": "vsys1",
+                "ip-netmask": "4.4.4.4",
+                "description": "TEST"
+            }
+        ]
+}'
+
+5. Addresses 삭제
+
+curl --location --request DELETE 'https://172.17.104.52/restapi/v9.1/Objects/Addresses?location=vsys&vsys=vsys1&name=4.4.4.4_TEST_OBJECT' \
+--header 'X-PAN-KEY: LUFRPT1kVzBIYlJsNHFxODN1UG5ubDhDTWE2a0lJc2c9SFRaVVFJOFRYRitubTk2c09RNzREa283UGEvZkxvMXJXaGhVWFBlZzg1cnlnL3MrbjYxSERpZkRWQ0x4ZWZYdw=='
+
+6. AddressGroups 전체조회
+
+curl --location --request GET 'https://172.17.104.52/restapi/v9.1/Objects/AddressGroups?location=vsys&vsys=vsys1' \
+--header 'X-PAN-KEY: LUFRPT1kVzBIYlJsNHFxODN1UG5ubDhDTWE2a0lJc2c9SFRaVVFJOFRYRitubTk2c09RNzREa283UGEvZkxvMXJXaGhVWFBlZzg1cnlnL3MrbjYxSERpZkRWQ0x4ZWZYdw=='
+
+7. AddressGroups 개별조회
+
+curl --location --request GET 'https://172.17.104.52/restapi/v9.1/Objects/AddressGroups?location=vsys&vsys=vsys1&name=TEST_GROUP1' \
+--header 'X-PAN-KEY: LUFRPT1kVzBIYlJsNHFxODN1UG5ubDhDTWE2a0lJc2c9SFRaVVFJOFRYRitubTk2c09RNzREa283UGEvZkxvMXJXaGhVWFBlZzg1cnlnL3MrbjYxSERpZkRWQ0x4ZWZYdw=='
+
+8. AddressGroups 추가(멤버포함)
+
+curl --location --request POST 'https://172.17.104.52/restapi/v9.1/Objects/AddressGroups?location=vsys&vsys=vsys1&name=TEST_GROUP2' \
+--header 'X-PAN-KEY: LUFRPT1kVzBIYlJsNHFxODN1UG5ubDhDTWE2a0lJc2c9SFRaVVFJOFRYRitubTk2c09RNzREa283UGEvZkxvMXJXaGhVWFBlZzg1cnlnL3MrbjYxSERpZkRWQ0x4ZWZYdw==' \
+--data-raw '{
+    "entry": [
+            {
+                "@name": "TEST_GROUP2",
+                "@location": "vsys",
+                "@vsys": "vsys1",
+                "static": {
+                    "member": [
+                        "1.1.1.1_TEST_OBJECT",
+                        "3.3.3.3_TEST_OBJECT"
+                    ]
+                },
+                "description": "TEST"
+            }
+        ]
+}'
+
+
+9. AddressGroups 멤버 추가 (기능X)
+
+'member' 매개 변수의 기존 목록 내용을 새 주소 개체 이름과 병합한 다음 PUT 요청에서 이 새 목록을 사용해야 합니다.
+
+10. AddressGroups PUT 수정 기능 테스트
+
+curl --location --request PUT 'https://172.17.104.52/restapi/v9.1/Objects/AddressGroups?location=vsys&vsys=vsys1&name=TEST_GROUP2' \
+--header 'X-PAN-KEY: LUFRPT1kVzBIYlJsNHFxODN1UG5ubDhDTWE2a0lJc2c9SFRaVVFJOFRYRitubTk2c09RNzREa283UGEvZkxvMXJXaGhVWFBlZzg1cnlnL3MrbjYxSERpZkRWQ0x4ZWZYdw==' \
+--data-raw '{
+    "entry": [
+            {
+                "@name": "TEST_GROUP2",
+                "@location": "vsys",
+                "@vsys": "vsys1",
+                "static": {
+                    "member": [
+                        "1.1.1.1_TEST_OBJECT",
+                        "3.3.3.3_TEST_OBJECT"
+                    ]
+                },
+                "description": "TEST"
+            }
+        ]
+}'
+
+11. AddressGroups 전체 삭제
+
+curl --location --request DELETE 'https://172.17.104.52/restapi/v9.1/Objects/AddressGroups?location=vsys&vsys=vsys1&name=TEST_GROUP2' \
+--header 'X-PAN-KEY: LUFRPT1kVzBIYlJsNHFxODN1UG5ubDhDTWE2a0lJc2c9SFRaVVFJOFRYRitubTk2c09RNzREa283UGEvZkxvMXJXaGhVWFBlZzg1cnlnL3MrbjYxSERpZkRWQ0x4ZWZYdw=='

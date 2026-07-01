@@ -1,0 +1,16 @@
+{
+  "device": "Fortinet FortiSandbox",
+  "vendor": "Fortinet",
+  "format": {
+    "type": "KVP",
+    "raw": "itime=$EPOCH date=$DATE time=$TIME logid=1220000020 type=event subtype=unknown pri=alert user=system ui=system action=rating status=success reason=none letype=6 msg=$ATTACK_NAME jobid=$CONN_ID sha1=$SHA1 sha256=$SHA256 rating=$RATING scantime=$SCAN_TIME malwarename=$ATTACK_NAME srcip=$SRC_IP dstip=$DST_IP protocol=HTTP url=$URL"
+  },
+  "xml": {
+    "raw": "<Policy>\n  <Parser parser_key=\"{@parser_key}\" type=\"1\" separator=\"Key&amp;Value\" arr_length=\"-1\">\n    <Field position=\"0\" name=\"date\" />\n    <Field position=\"1\" name=\"msg\" />\n    <Field position=\"2\" name=\"reason\" />\n    <Field position=\"3\" name=\"src_ip\" org_name=\"srcip\" />\n    <Field position=\"4\" name=\"sha256\" />\n    <Field position=\"5\" name=\"rating\" />\n    <Field position=\"6\" name=\"itime\" />\n    <Field position=\"7\" name=\"type\" />\n    <Field position=\"8\" name=\"jobid\" />\n    <Field position=\"9\" name=\"prtc\" org_name=\"protocol\" />\n    <Field position=\"10\" name=\"ui\" />\n    <Field position=\"11\" name=\"subtype\" />\n    <Field position=\"12\" name=\"action\" />\n    <Field position=\"13\" name=\"dstn_ip\" org_name=\"dstip\" />\n    <Field position=\"14\" name=\"letype\" />\n    <Field position=\"15\" name=\"pri\" />\n    <Field position=\"16\" name=\"malware_name\" org_name=\"malwarename\" />\n    <Field position=\"17\" name=\"url\" />\n    <Field position=\"18\" name=\"sha1\" />\n    <Field position=\"19\" name=\"scan_time\" org_name=\"scantime\" />\n    <Field position=\"20\" name=\"logid\" />\n    <Field position=\"21\" name=\"time\" />\n    <Field position=\"22\" name=\"user\" />\n    <Field position=\"23\" name=\"device\" />\n    <Field position=\"24\" name=\"status\" />\n    <Field position=\"25\" name=\"vendor\" convert_tag=\"[[@set(&apos;fortinet&apos;)]]\" />\n    <Field position=\"26\" name=\"model\" convert_tag=\"[[@set(&apos;sandbox&apos;)]]\" />\n    <Field position=\"27\" name=\"logtype\" convert_tag=\"[[@set(&apos;security&apos;)]]\" />\n    <Field position=\"28\" name=\"parser_version\" convert_tag=\"[[@set(&apos;v1&apos;)]]\" />\n    <Field position=\"29\" name=\"original_log\" convert_tag=\"[[@originalLog()]]\" />\n    <Field position=\"30\" name=\"parser_info\" convert_tag=\"[[@set(&apos;[Fortinet]_sandbox_security_v1_keyvalue&apos;)]]\" />\n  </Parser>\n</Policy>"
+  },
+  "scenarios": [
+    { "attackName": "Clean",                      "weight": 40 },
+    { "attackName": "Malicious-Trojan",           "weight": 30 },
+    { "attackName": "Suspicious-Downloader",      "weight": 30 }
+  ]
+}

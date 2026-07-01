@@ -1,0 +1,16 @@
+{
+  "device": "Juniper Networks JATP Cortex 3.6.0.1444",
+  "vendor": "Juniper Networks",
+  "format": {
+    "type": "CEF",
+    "raw": "Dec 9 19:47:19 IP Dec 09 19:49:36 hostname CEF:0|JATP|Cortex|3.6.0.1444|email|TROJAN.$ATTACK_NAME|$SEVERITY|externalId=$CONN_ID eventId=14068 lastActivityTime=2016-05-10 02:49:36:00 src=$SRC_IP dst=$DST_IP srcHostname= dstHostname= srcUsername= dstUsername= mailtoSrcEmailId=src@abc.com dstEmailId=mailto:test1@abc.com,mailto:test2@abc.com fileHash=$FILE_HASH fileType=PE32 executable startTime=2016-05-10"
+  },
+  "xml": {
+    "raw": "<Policy>\n  <Parser parser_key=\"{@parser_key}\" type=\"1\" separator=\"CEF\" version=\"0\" arr_length=\"-1\">\n    <Field position=\"0\"  name=\"device_version\" />\n    <Field position=\"1\"  name=\"severity\" />\n    <Field position=\"2\"  name=\"device_product\" />\n    <Field position=\"3\"  name=\"event_id\" />\n    <Field position=\"4\"  name=\"attack_nm\" />\n    <Field position=\"5\"  name=\"src\" />\n    <Field position=\"6\"  name=\"external_id\" />\n    <Field position=\"7\"  name=\"file_hash\" />\n    <Field position=\"8\"  name=\"cef_version\" />\n    <Field position=\"9\"  name=\"signature_id\" />\n    <Field position=\"10\" name=\"dst_email_id\" />\n    <Field position=\"11\" name=\"start_time\" />\n    <Field position=\"12\" name=\"device_vendor\" />\n    <Field position=\"13\" name=\"last_activity_time\" />\n    <Field position=\"14\" name=\"mailto_src_email_id\" />\n    <Field position=\"15\" name=\"file_type\" />\n    <Field position=\"16\" name=\"vendor\"         convert_tag=\"[[@set(&apos;junipernetworks&apos;)]]\" />\n    <Field position=\"17\" name=\"model\"          convert_tag=\"[[@set(&apos;jatpcortex&apos;)]]\" />\n    <Field position=\"18\" name=\"logtype\"        convert_tag=\"[[@set(&apos;security&apos;)]]\" />\n    <Field position=\"19\" name=\"parser_version\"  convert_tag=\"[[@set(&apos;v2&apos;)]]\" />\n    <Field position=\"20\" name=\"original_log\"   convert_tag=\"[[@originalLog()]]\" />\n    <Field position=\"21\" name=\"parser_info\"    convert_tag=\"[[@set(&apos;[Juniper]_jatp_security_v2_cef&apos;)]]\" />\n    <Field position=\"22\" name=\"eqp_type\"       convert_tag=\"[[@set(&apos;apt&apos;)]]\" />\n  </Parser>\n</Policy>"
+  },
+  "scenarios": [
+    { "attackName": "GIPPER.DC8",   "weight": 40 },
+    { "attackName": "Emotet.BA",    "weight": 30 },
+    { "attackName": "AgentTesla",   "weight": 30 }
+  ]
+}

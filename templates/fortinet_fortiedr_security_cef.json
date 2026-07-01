@@ -1,0 +1,17 @@
+{
+  "device": "Fortinet FortiEDR 7.0.0",
+  "vendor": "Fortinet",
+  "format": {
+    "type": "CEF",
+    "raw": "<134>$DATE $TIME fortiedr-hostname CEF:0|Fortinet|FortiEDR|7.0.0|4105996|Security Event|10|cs1Label=Organization cs1=AcmeCorp cs2Label=OrganizationId cs2=1234 cs3Label=OS cs3=Windows 10 Pro cs4Label=ProcessPath cs4=C:\\$ATTACK_NAME.exe cs5Label=DeviceState cs5=Running cs6Label=RawDataId cs6=789012 suser=$USER shost=$HOST fileHash=$FILE_HASH fname=$FILE_NAME app=$APP act=$ACTION dmac=$DST_MAC dst=SensitiveFile.txt deviceCustomDate1Label=FirstSeen deviceCustomDate1=$DATE cn1Label=Count cn1=5 msg=$ATTACK_NAME reason=Rule Sensitive File Access Attempt cs7Label=ProcessType cs7=64bit cs8Label=Classification cs8=Malicious"
+  },
+  "xml": {
+    "raw": "<Policy>\n  <Parser parser_key=\"{@parser_key}\" type=\"1\" separator=\"CEF\" version=\"0\" arr_length=\"-1\">\n    <Field position=\"0\" name=\"device_version\" />\n    <Field position=\"1\" name=\"msg\" convert_tag=\"[[@toLowerCase()]]\" />\n    <Field position=\"2\" name=\"device_product\" />\n    <Field position=\"3\" name=\"reason\" />\n    <Field position=\"4\" name=\"Organization\" />\n    <Field position=\"5\" name=\"dmac\" />\n    <Field position=\"6\" name=\"dst\" />\n    <Field position=\"7\" name=\"fileHash\" />\n    <Field position=\"8\" name=\"OrganizationId\" />\n    <Field position=\"9\" name=\"Count\" />\n    <Field position=\"10\" name=\"deviceCustomDate2Label\" />\n    <Field position=\"11\" name=\"signature_id\" />\n    <Field position=\"12\" name=\"ProcessType\" />\n    <Field position=\"13\" name=\"action\" org_name=\"act\" />\n    <Field position=\"14\" name=\"RawDataId\" />\n    <Field position=\"15\" name=\"Classification\" />\n    <Field position=\"16\" name=\"deviceCustomDate1Label\" />\n    <Field position=\"17\" name=\"shost\" />\n    <Field position=\"18\" name=\"severity\" />\n    <Field position=\"19\" name=\"app\" />\n    <Field position=\"20\" name=\"fname\" />\n    <Field position=\"21\" name=\"attack_nm\" />\n    <Field position=\"22\" name=\"OS\" />\n    <Field position=\"23\" name=\"deviceCustomDate2\" />\n    <Field position=\"24\" name=\"deviceCustomDate1\" />\n    <Field position=\"25\" name=\"ProcessPath\" />\n    <Field position=\"26\" name=\"cef_version\" />\n    <Field position=\"27\" name=\"DeviceState\" />\n    <Field position=\"28\" name=\"suser\" />\n    <Field position=\"29\" name=\"device_vendor\" />\n    <Field position=\"30\" name=\"Certificate\" />\n    <Field position=\"31\" name=\"vendor\" convert_tag=\"[[@set(&apos;fortinet&apos;)]]\" />\n    <Field position=\"32\" name=\"logtype\" convert_tag=\"[[@set(&apos;threat&apos;)]]\" />\n    <Field position=\"33\" name=\"parser_version\" convert_tag=\"[[@set(&apos;v1&apos;)]]\" />\n    <Field position=\"34\" name=\"original_log\" convert_tag=\"[[@originalLog()]]\" />\n    <Field position=\"35\" name=\"parser_info\" convert_tag=\"[[@set(&apos;[Fortinet]_fortiedr_security_v1_cef&apos;)]]\" />\n    <Field position=\"36\" name=\"model\" convert_tag=\"[[@copy(&apos;device_product&apos;)]][[@toLowerCase()]]\" />\n    <Field position=\"37\" name=\"eqp_type\" convert_tag=\"[[@set(&apos;edr&apos;)]]\" />\n  </Parser>\n</Policy>"
+  },
+  "scenarios": [
+    { "attackName": "Ransomware-Conti",          "weight": 30 },
+    { "attackName": "SensitiveFileAccess",        "weight": 30 },
+    { "attackName": "SuspiciousProcessInject",    "weight": 20 },
+    { "attackName": "CredentialDumping-Mimikatz", "weight": 20 }
+  ]
+}

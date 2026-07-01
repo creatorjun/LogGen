@@ -1,0 +1,11 @@
+{
+  "endpoint": "/api/v1/ti/hash",
+  "method": "GET",
+  "simulate_delay_ms": 1500,
+  "error_rate": 0.0,
+  "response": {
+    "status_code": 200,
+    "content_type": "application/json",
+    "body": "{\n  \"hash\": \"{{req.body.hash}}\",\n  \"verdict\": \"malicious\",\n  \"confidence\": 97,\n  \"first_seen\": \"{{DATE}}\",\n  \"last_seen\": \"{{TIMESTAMP}}\",\n  \"tags\": [\"trojan\", \"ransomware\"],\n  \"source\": \"TI-Platform\"\n}"
+  }
+}

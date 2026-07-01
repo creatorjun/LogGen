@@ -1,0 +1,16 @@
+{
+  "device": "Fortinet FortiSandbox",
+  "vendor": "Fortinet",
+  "format": {
+    "type": "KVP",
+    "raw": "itime=$EPOCH date=$DATE time=$TIME logid=0106000001 type=event subtype=system pri=debug user=system ui=system action=controller status=success reason=none letype=6 pid=$CONN_ID msg=$MSG"
+  },
+  "xml": {
+    "raw": "<Policy>\n  <Parser parser_key=\"{@parser_key}\" type=\"1\" separator=\"Key&amp;Value\" arr_length=\"-1\">\n    <Field position=\"0\" name=\"date\" />\n    <Field position=\"1\" name=\"msg\" convert_tag=\"[[@toLowerCase()]]\" />\n    <Field position=\"2\" name=\"reason\" />\n    <Field position=\"3\" name=\"letype\" />\n    <Field position=\"4\" name=\"pri\" />\n    <Field position=\"5\" name=\"pid\" />\n    <Field position=\"6\" name=\"itime\" />\n    <Field position=\"7\" name=\"type\" />\n    <Field position=\"8\" name=\"ui\" />\n    <Field position=\"9\" name=\"subtype\" />\n    <Field position=\"10\" name=\"action\" />\n    <Field position=\"11\" name=\"logid\" />\n    <Field position=\"12\" name=\"time\" />\n    <Field position=\"13\" name=\"user\" />\n    <Field position=\"14\" name=\"status\" />\n    <Field position=\"15\" name=\"model\" convert_tag=\"[[@set(&apos;sandbox&apos;)]]\" />\n    <Field position=\"16\" name=\"logtype\" convert_tag=\"[[@set(&apos;system&apos;)]]\" />\n    <Field position=\"17\" name=\"parser_version\" convert_tag=\"[[@set(&apos;v1&apos;)]]\" />\n    <Field position=\"18\" name=\"original_log\" convert_tag=\"[[@originalLog()]]\" />\n    <Field position=\"19\" name=\"parser_info\" convert_tag=\"[[@set(&apos;[Fortinet]_sandbox_system_v1_keyvalue&apos;)]]\" />\n    <Field position=\"20\" name=\"eqp_type\" convert_tag=\"[[@set(&apos;fw&apos;)]]\" />\n  </Parser>\n</Policy>"
+  },
+  "scenarios": [
+    { "attackName": "Sandboxing environment is not available", "weight": 50 },
+    { "attackName": "Sandbox job submitted",                  "weight": 30 },
+    { "attackName": "Controller started",                     "weight": 20 }
+  ]
+}

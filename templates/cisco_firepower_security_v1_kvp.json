@@ -1,0 +1,21 @@
+{
+  "device": "Cisco Firepower Threat Defense",
+  "vendor": "Cisco",
+  "format": {
+    "type": "KVP",
+    "raw": "$DATE FTD-0-430001 DeviceUUID $DEVICE_UUID, SrcIP $SRC_IP, DstIP $DST_IP, SrcPort $SRC_PORT, DstPort $DST_PORT, Protocol tcp, IngressInterface DMZOutside, EgressInterface DMZ, IngressZone DMZOutside, EgressZone DMZ, Priority 1, GID 1, SID 13719, Revision 6, Message $ATTACK_NAME, Classification Attempted Administrator Privilege Gain, User No Authentication Required, Client SSL client, ApplicationProtocol SSL, IntrusionPolicy SJBBIPSDMZ, ACPolicy SJBBCSIPS, NAPPolicy Network Analysis"
+  },
+  "xml": {
+    "raw": "<Policy>\n  <Parser parser_key=\"{@parser_key}\" type=\"1\" separator=\"Key&amp;Value4\" arr_length=\"24\">\n    <Field position=\"0\"  name=\"syslog_msg_cd\" />\n    <Field position=\"1\"  name=\"application_protocol\" org_name=\"ApplicationProtocol\" />\n    <Field position=\"2\"  name=\"src_port\"            org_name=\"SrcPort\" />\n    <Field position=\"3\"  name=\"gid\"                 org_name=\"GID\" />\n    <Field position=\"4\"  name=\"user\"                org_name=\"User\" />\n    <Field position=\"5\"  name=\"msg\"                 org_name=\"Message\" />\n    <Field position=\"6\"  name=\"nap_policy\"          org_name=\"NAPPolicy\" />\n    <Field position=\"7\"  name=\"priority\"            org_name=\"Priority\" />\n    <Field position=\"8\"  name=\"ingress_zone\"        org_name=\"IngressZone\" />\n    <Field position=\"9\"  name=\"ingress_interface\"   org_name=\"IngressInterface\" />\n    <Field position=\"10\" name=\"intrusion_policy\"    org_name=\"IntrusionPolicy\" />\n    <Field position=\"11\" name=\"egress_zone\"         org_name=\"EgressZone\" />\n    <Field position=\"12\" name=\"dstn_port\"           org_name=\"DstPort\" />\n    <Field position=\"13\" name=\"eqp_dt\" />\n    <Field position=\"14\" name=\"src_ip\"              org_name=\"SrcIP\" />\n    <Field position=\"15\" name=\"sid\"                 org_name=\"SID\" />\n    <Field position=\"16\" name=\"device_uid\"          org_name=\"DeviceUUID\" />\n    <Field position=\"17\" name=\"egress_interface\"    org_name=\"EgressInterface\" />\n    <Field position=\"18\" name=\"revision\"            org_name=\"Revision\" />\n    <Field position=\"19\" name=\"ac_policy\"           org_name=\"ACPolicy\" />\n    <Field position=\"20\" name=\"classification\"      org_name=\"Classification\" />\n    <Field position=\"21\" name=\"dstn_ip\"             org_name=\"DstIP\" />\n    <Field position=\"22\" name=\"prtc\"               org_name=\"Protocol\" convert_tag=\"[[@toLowerCase()]]\" />\n    <Field position=\"23\" name=\"client\"              org_name=\"Client\" />\n    <Field position=\"24\" name=\"vendor\"              convert_tag=\"[[@set(&apos;cisco&apos;)]]\" />\n    <Field position=\"25\" name=\"model\"               convert_tag=\"[[@set(&apos;firepower&apos;)]]\" />\n    <Field position=\"26\" name=\"logtype\"             convert_tag=\"[[@set(&apos;threat&apos;)]]\" />\n    <Field position=\"27\" name=\"parser_version\"      convert_tag=\"[[@set(&apos;v1&apos;)]]\" />\n    <Field position=\"28\" name=\"original_log\"        convert_tag=\"[[@originalLog()]]\" />\n    <Field position=\"29\" name=\"eqp_type\"            convert_tag=\"[[@set(&apos;fw&apos;)]]\" />\n    <Field position=\"30\" name=\"parser_info\"         convert_tag=\"[[@set(&apos;[Cisco]_firepower_security_v1_keyvalue&apos;)]]\" />\n  </Parser>\n</Policy>"
+  },
+  "scenarios": [
+    {
+      "attackName": "SERVER-ORACLE database username buffer overflow",
+      "weight": 70
+    },
+    {
+      "attackName": "ET WEB_SERVER Possible Apache Struts RCE Attempt",
+      "weight": 30
+    }
+  ]
+}

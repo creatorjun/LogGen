@@ -1,0 +1,15 @@
+{
+  "device": "Juniper Networks SRX",
+  "vendor": "Juniper Networks",
+  "format": {
+    "type": "KVP",
+    "raw": "id=firewall time=$DATE fw=$FIREWALL_IP pri=6 msg=session created $SRC_IP$SRC_PORT-$DST_IP$DST_PORT icmp $SRC_IP$SRC_PORT-$DST_IP$DST_PORT NA NA NA NA 1 3000 vpn trust $SESSION_ID NANA st0.0 UNKNOWN UNKNOWN UNKNOWN"
+  },
+  "xml": {
+    "raw": "<Policy>\n  <Parser parser_key=\"{@parser_key}\" type=\"1\" separator=\"Key&amp;Value\" arr_length=\"5\">\n    <Field position=\"0\"  name=\"msg\" />\n    <Field position=\"1\"  name=\"firewall_ip\"   org_name=\"fw\" />\n    <Field position=\"2\"  name=\"severity\"      org_name=\"pri\" />\n    <Field position=\"3\"  name=\"type\"          org_name=\"id\" />\n    <Field position=\"4\"  name=\"event_time\"    org_name=\"time\" />\n    <Field position=\"5\"  name=\"vendor\"        convert_tag=\"[[@set(&apos;junipernetworks&apos;)]]\" />\n    <Field position=\"6\"  name=\"model\"         convert_tag=\"[[@set(&apos;srx&apos;)]]\" />\n    <Field position=\"7\"  name=\"logtype\"       convert_tag=\"[[@set(&apos;session&apos;)]]\" />\n    <Field position=\"8\"  name=\"parser_version\" convert_tag=\"[[@set(&apos;v1&apos;)]]\" />\n    <Field position=\"9\"  name=\"original_log\"  convert_tag=\"[[@originalLog()]]\" />\n    <Field position=\"10\" name=\"eqp_type\"      convert_tag=\"[[@set(&apos;fw&apos;)]]\" />\n    <Field position=\"11\" name=\"parser_info\"   convert_tag=\"[[@set(&apos;[Juniper]_srx_traffic_v1_keyvalue&apos;)]]\" />\n  </Parser>\n</Policy>"
+  },
+  "scenarios": [
+    { "attackName": "session created",  "weight": 60 },
+    { "attackName": "session closed",   "weight": 40 }
+  ]
+}

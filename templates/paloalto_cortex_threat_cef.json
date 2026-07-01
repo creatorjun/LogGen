@@ -1,0 +1,17 @@
+{
+  "device": "Palo Alto Networks Cortex XDR 7.5",
+  "vendor": "Palo Alto Networks",
+  "format": {
+    "type": "CEF",
+    "raw": "CEF:0|Palo Alto Networks|Cortex XDR|7.5|THREAT|Endpoint Threat|10|src=$SRC_IP dst=$DST_IP spt=$SRC_PORT dpt=$DST_PORT fileHash=sha256abc123... fileName=$FILE_NAME act=$ACTION severity=$SEVERITY"
+  },
+  "xml": {
+    "raw": "<Policy>\n  <Parser parser_key=\"{@parser_key}\" type=\"1\" separator=\"CEF\" version=\"0\" arr_length=\"-1\">\n    <Field position=\"0\"  name=\"device_version\" />\n    <Field position=\"1\"  name=\"severity\" />\n    <Field position=\"2\"  name=\"device_product\" convert_tag=\"[[@toLowerCase()]]\" />\n    <Field position=\"3\"  name=\"attack_nm\" />\n    <Field position=\"4\"  name=\"fileName\" />\n    <Field position=\"5\"  name=\"dstn_ip\"       org_name=\"dst\" />\n    <Field position=\"6\"  name=\"src_ip\"        org_name=\"src\" />\n    <Field position=\"7\"  name=\"dstn_port\"     org_name=\"dpt\" />\n    <Field position=\"8\"  name=\"fileHash\" />\n    <Field position=\"9\"  name=\"cef_version\" />\n    <Field position=\"10\" name=\"signature_id\" />\n    <Field position=\"11\" name=\"action\"        org_name=\"act\" />\n    <Field position=\"12\" name=\"src_port\"      org_name=\"spt\" />\n    <Field position=\"13\" name=\"device_vendor\" />\n    <Field position=\"14\" name=\"vendor\"        convert_tag=\"[[@set(&apos;paloaltonetworks&apos;)]]\" />\n    <Field position=\"15\" name=\"original_log\"  convert_tag=\"[[@originalLog()]]\" />\n    <Field position=\"16\" name=\"parser_version\" convert_tag=\"[[@set(&apos;v1&apos;)]]\" />\n    <Field position=\"17\" name=\"model\"         convert_tag=\"[[@set(&apos;cortexagent&apos;)]]\" />\n    <Field position=\"18\" name=\"logtype\"       convert_tag=\"[[@set(&apos;threat&apos;)]]\" />\n    <Field position=\"19\" name=\"parser_info\"   convert_tag=\"[[@set(&apos;[PaloAlto]_cortex-xdr_threat_v1_cef&apos;)]]\" />\n    <Field position=\"20\" name=\"eqp_type\"      convert_tag=\"[[@set(&apos;xdr&apos;)]]\" />\n  </Parser>\n</Policy>"
+  },
+  "scenarios": [
+    { "attackName": "Ransomware-WannaCry",      "weight": 30 },
+    { "attackName": "Trojan-Dropper",           "weight": 30 },
+    { "attackName": "Exploit-CVE-2021-44228",   "weight": 20 },
+    { "attackName": "Spyware-AgentTesla",       "weight": 20 }
+  ]
+}

@@ -1,0 +1,94 @@
+# .github/workflows/build.yml
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: SIMLogGenerator.exe
+
+          - os: ubuntu-latest
+            artifact: SIMLogGenerator
+
+          - os: macos-latest
+            artifact: SIMLogGenerator
+
+    runs-on: ${{ matrix.os }}
+    name: Build (${{ matrix.os }})
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libxext-dev \
+            pkg-config \
+            ninja-build
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Install system dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja --yes
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 'cac7d29f246eb789a84004fbfc11bb00db1aa89b'
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+        shell: bash
+        env:
+          VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Locate artifact (Linux / macOS)
+        if: runner.os != 'Windows'
+        run: |
+          BINARY=$(find build -maxdepth 2 -name "${{ matrix.artifact }}" -type f | head -n 1)
+          echo "BINARY_PATH=$BINARY" >> $GITHUB_ENV
+
+      - name: Locate artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          BINARY=$(find build -maxdepth 3 -name "${{ matrix.artifact }}" -type f | head -n 1)
+          echo "BINARY_PATH=$BINARY" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}-${{ matrix.os }}
+          path: ${{ env.BINARY_PATH }}
+          if-no-files-found: error
+          retention-days: 30

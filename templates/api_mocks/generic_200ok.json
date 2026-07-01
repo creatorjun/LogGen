@@ -1,0 +1,11 @@
+{
+  "endpoint": "*",
+  "method": "*",
+  "simulate_delay_ms": 0,
+  "error_rate": 0.0,
+  "response": {
+    "status_code": 200,
+    "content_type": "application/json",
+    "body": "{\n  \"status\": \"success\",\n  \"message\": \"OK\",\n  \"timestamp\": \"{{TIMESTAMP}}\"\n}"
+  }
+}

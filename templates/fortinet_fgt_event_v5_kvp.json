@@ -1,0 +1,37 @@
+{
+  "id": "fortinet_fgt_event_v5_kvp",
+  "vendor": "fortinet",
+  "model": "fgt",
+  "logtype": "event",
+  "version": "v5",
+  "format": "KeyValue2",
+  "description": "Fortinet FortiGate Event v5 KeyValue2 - admin config change",
+  "sample": "date=2025-08-05T11:15:09,time=2025-08-05T11:15:09,devname=FW16,deviceid=FGT90D3X99990123,logid=1059028704,type=event,subtype=config,pri=info,msg=Admin configuration change,admin=admin,src=192.168.1.24,action=DENY",
+  "parser": {
+    "parserkey": "parserkey",
+    "type": 1,
+    "separator": "KeyValue2",
+    "arrlength": 12
+  },
+  "fields": [
+    { "position": 0,  "name": "date",        "converttag": "replace:'T',''replaceAll:',',''" },
+    { "position": 1,  "name": "msg" },
+    { "position": 2,  "name": "logid" },
+    { "position": 3,  "name": "deviceid" },
+    { "position": 4,  "name": "subtype" },
+    { "position": 5,  "name": "srcip",       "orgname": "src" },
+    { "position": 6,  "name": "pri" },
+    { "position": 7,  "name": "userrole",    "orgname": "admin" },
+    { "position": 8,  "name": "action",      "converttag": "toLowerCase" },
+    { "position": 9,  "name": "devname" },
+    { "position": 10, "name": "time",        "converttag": "replace:'T',''replaceAll:',',''" },
+    { "position": 11, "name": "type" },
+    { "position": 12, "name": "vendor",      "converttag": "set:'fortinet'" },
+    { "position": 13, "name": "model",       "converttag": "set:'fgt'" },
+    { "position": 14, "name": "logtype",     "converttag": "set:'event'" },
+    { "position": 15, "name": "paserversion", "converttag": "set:'v5'" },
+    { "position": 16, "name": "originallog", "converttag": "originalLog" },
+    { "position": 17, "name": "parserinfo",  "converttag": "set:'fortinetfgteventv5keyvalue'" },
+    { "position": 18, "name": "eqptype",     "converttag": "set:'fw'" }
+  ]
+}

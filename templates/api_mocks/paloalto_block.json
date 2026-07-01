@@ -1,0 +1,12 @@
+{
+  "endpoint": "/restapi/v10.1/Policies/SecurityRules",
+  "method": "POST",
+  "simulate_delay_ms": 800,
+  "error_rate": 0.05,
+  "error_codes": [500, 503],
+  "response": {
+    "status_code": 200,
+    "content_type": "application/json",
+    "body": "{\n  \"@status\": \"success\",\n  \"@code\": \"20\",\n  \"msg\": \"command succeeded\",\n  \"result\": {\n    \"@name\": \"{{req.body.name}}\",\n    \"destination\": \"{{req.body.destination}}\",\n    \"action\": \"deny\",\n    \"modified\": \"{{TIMESTAMP}}\"\n  }\n}"
+  }
+}

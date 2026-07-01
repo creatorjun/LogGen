@@ -1,0 +1,16 @@
+{
+  "device": "Fortinet FortiGate HQ-FGT",
+  "vendor": "Fortinet",
+  "format": {
+    "type": "KVP",
+    "raw": "date=$DATE,time=$TIME,devname=$DEVICE_NAME,deviceid=$DEVICE_ID,logid=1059028704,type=event,subtype=system,pri=notice,msg=$MSG,src=$SRC_IP,dst=$DST_IP,srcport=$SRC_PORT,dstport=$DST_PORT,proto=$PROTO,action=$ACTION"
+  },
+  "xml": {
+    "raw": "<Policy>\n  <Parser parser_key=\"{@parser_key}\" type=\"1\" separator=\"Key&amp;Value2\" arr_length=\"15\">\n    <Field position=\"0\" name=\"date\" />\n    <Field position=\"1\" name=\"msg\" />\n    <Field position=\"2\" name=\"logid\" />\n    <Field position=\"3\" name=\"device_id\" org_name=\"deviceid\" />\n    <Field position=\"4\" name=\"dstn_ip\" org_name=\"dst\" />\n    <Field position=\"5\" name=\"src_ip\" org_name=\"src\" />\n    <Field position=\"6\" name=\"pri\" />\n    <Field position=\"7\" name=\"type\" />\n    <Field position=\"8\" name=\"src_port\" org_name=\"srcport\" />\n    <Field position=\"9\" name=\"subtype\" />\n    <Field position=\"10\" name=\"prtc\" org_name=\"proto\" convert_tag=\"[[@toLowerCase()]]\" />\n    <Field position=\"11\" name=\"dstn_port\" org_name=\"dstport\" />\n    <Field position=\"12\" name=\"action\" convert_tag=\"[[@toLowerCase()]]\" />\n    <Field position=\"13\" name=\"device_name\" org_name=\"devname\" />\n    <Field position=\"14\" name=\"time\" convert_tag=\"[[@replaceAll(&apos;T&apos;,&apos; &apos;)]]\" />\n    <Field position=\"15\" name=\"vendor\" convert_tag=\"[[@set(&apos;fortinet&apos;)]]\" />\n    <Field position=\"16\" name=\"model\" convert_tag=\"[[@set(&apos;fgt&apos;)]]\" />\n    <Field position=\"17\" name=\"logtype\" convert_tag=\"[[@set(&apos;event&apos;)]]\" />\n    <Field position=\"18\" name=\"parser_version\" convert_tag=\"[[@set(&apos;v4&apos;)]]\" />\n    <Field position=\"19\" name=\"original_log\" convert_tag=\"[[@originalLog()]]\" />\n    <Field position=\"20\" name=\"parser_info\" convert_tag=\"[[@set(&apos;[Fortinet]_fgt_system_v4_keyvalue&apos;)]]\" />\n    <Field position=\"21\" name=\"eqp_type\" convert_tag=\"[[@set(&apos;fw&apos;)]]\" />\n  </Parser>\n</Policy>"
+  },
+  "scenarios": [
+    { "attackName": "System is up",                "weight": 40 },
+    { "attackName": "Admin login",                 "weight": 30 },
+    { "attackName": "Configuration changed",       "weight": 30 }
+  ]
+}

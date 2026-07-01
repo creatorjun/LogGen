@@ -1,0 +1,42 @@
+{
+  "id": "fortinet_fgt_security_v7_kvp",
+  "vendor": "fortinet",
+  "model": "fgt",
+  "logtype": "threat",
+  "version": "v7",
+  "format": "KeyValue2",
+  "description": "Fortinet FortiGate Security v7 KeyValue2 - IPS DoS SYN Flood",
+  "sample": "date=2025-08-05T11:25:25,time=2025-08-05T11:25:25,devname=Campus-FW,deviceid=FGT30E4Q16001919,logid=0419016384,type=ips,subtype=dos,pri=alert,vd=root,src=192.168.1.141,dst=47.89.0.1,srcport=1086,dstport=1288,proto=HTTPS,attack=synflood,msg=DoS attack detected SYN Flood,action=ALLOW",
+  "parser": {
+    "parserkey": "parserkey",
+    "type": 1,
+    "separator": "KeyValue2",
+    "arrlength": -1
+  },
+  "fields": [
+    { "position": 0,  "name": "date",        "converttag": "replace:'T',''replaceAll:',',''" },
+    { "position": 1,  "name": "msg" },
+    { "position": 2,  "name": "logid" },
+    { "position": 3,  "name": "deviceid" },
+    { "position": 4,  "name": "dstnip",      "orgname": "dst" },
+    { "position": 5,  "name": "srcip",       "orgname": "src" },
+    { "position": 6,  "name": "pri" },
+    { "position": 7,  "name": "type" },
+    { "position": 8,  "name": "vd" },
+    { "position": 9,  "name": "srcport" },
+    { "position": 10, "name": "subtype" },
+    { "position": 11, "name": "attacknm",    "orgname": "attack" },
+    { "position": 12, "name": "prtc",        "orgname": "proto", "converttag": "toLowerCase" },
+    { "position": 13, "name": "dstnport",    "orgname": "dstport" },
+    { "position": 14, "name": "action",      "converttag": "toLowerCase" },
+    { "position": 15, "name": "devname" },
+    { "position": 16, "name": "time" },
+    { "position": 17, "name": "vendor",      "converttag": "set:'fortinet'" },
+    { "position": 18, "name": "model",       "converttag": "set:'fgt'" },
+    { "position": 19, "name": "logtype",     "converttag": "set:'threat'" },
+    { "position": 20, "name": "paserversion", "converttag": "set:'v7'" },
+    { "position": 21, "name": "originallog", "converttag": "originalLog" },
+    { "position": 22, "name": "eqptype",     "converttag": "copy:'type'" },
+    { "position": 23, "name": "parserinfo",  "converttag": "set:'fortinetfgtthreatv7keyvalue'" }
+  ]
+}

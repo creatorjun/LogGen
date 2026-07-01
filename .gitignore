@@ -1,0 +1,6 @@
+/logs
+/config
+/build
+/vcpkg
+.vscode
+*.ini

@@ -1,0 +1,1020 @@
+GET
+
+PUT
+
+PUT
+
+PUT
+
+PUT
+
+IPv6	방화벽	고급	설정	REST	API	문서
+
+https://{url}/api/po
+
+url:	required	(string)
+IP:PORT
+
+Example:
+
+https://192.168.100.100/api/po
+
+IPv6	방화벽	고급	설정
+
+/fw/6/config
+
+정책	Hit	수	초기화
+
+/fw/6/hitcount/statistics
+
+IPv6	방화벽	고급	설정	적용/취소
+
+/command/fw-6-config/apply
+
+/command/fw-6-config/cancel
+
+IPv6	방화벽	고급	설정
+
+GET
+
+/fw/6/config
+
+IPv6	방화벽	고급	설정을(를)	조회한다.
+
+Request
+
+Headers
+
+Authorization:	required	(string)
+API	Token
+로그인	후	응답에	포함된	 api_token 을	설정
+
+Example:
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept:	required	(string)
+Example:
+
+application/json
+
+Content-Type:	required	(string)
+Example:
+
+application/json
+
+Accept-Language:	(one	of	ko,	en	-	default:	ko)
+언어	설정
+
+필수가	아니며	요청	시	설정되지	않으면	로그인	시	사용된	언어로	설정됩니다.
+한국어:	ko,	영어:	en
+
+Example:
+
+ko
+
+Response
+
+HTTP	status	code	200
+
+IPv6	방화벽	고급	설정	조회	성공
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+result:	required	(object)
+
+결과	데이터
+
+shadow_rule_excpt:	required	(one	of	0,	1)
+정책	적용	시	Shadow	정책	자동	제외
+0:	사용	안함,	1:	사용
+
+auto_use_check:	required	(one	of	0,	1)
+정책	추가	시	사용	여부	자동	체크
+0:	사용	안함,	1:	사용
+
+apply_popup:	required	(one	of	0,	1)
+정책	적용	시	확인	창	팝업
+0:	사용	안함,	1:	사용
+
+shadow_rule_check:	required	(one	of	0,	1)
+정책	적용	시	Shadow	정책	확인
+0:	사용	안함,	1:	사용
+
+any_rule_check:	required	(one	of	0,	1)
+정책	적용	시	All	Any	정책	확인
+0:	사용	안함,	1:	사용
+
+sess_manage:	required	(one	of	1,	2,	3)
+정책	적용	시	방화벽	세션	관리
+1:	유지,	2:	재분류,	3:	삭제
+
+sess_limit:	required	(one	of	0,	1,	2)
+세션	제한
+0:	사용	안함,	1:	사용(전체	적용),	2:	사용(정책별	적용)
+
+sess_limit_all_check:	required	(integer	-	default:	1000	-	minimum:	60	-	maximum:	2000000)
+전체	적용(출발지	IP당	제한된	세션	수)
+
+sess_limit_rule_check:	required	(integer	-	default:	120	-	minimum:	1	-	maximum:	2592000)
+정책	적용(정책에서	차단	조건	선택	시	차단	시간(초))
+
+all_frag_pack_allow:	required	(one	of	0,	1)
+모든	조각	패킷	허용
+0:	사용	안함,	1:	사용
+
+first_frag_check:	required	(one	of	0,	1)
+첫	조각	패킷이	통과하지	않은	경우	차단
+0:	사용	안함,	1:	사용
+
+web_log:	required	(one	of	0,	1)
+웹	모니터링	URL	로깅
+0:	사용	안함,	1:	사용
+
+web_cog:	required	(one	of	0,	1)
+웹	모니터링	웹	인지
+0:	사용	안함,	1:	사용
+
+tcp_sess_start_log:	(one	of	0,	1)
+TCP	세션	시작	로그	사용
+0:	사용	안함,	1:	사용
+
+(Deprecated:	2.0.0부터	사용되지	않음)
+
+x_forward_for:	required	(one	of	0,	1)
+X-Forwarded-For	로깅
+0:	사용	안함,	1:	사용
+
+x_forward_con:	required	(one	of	0,	1)
+X-Forwarded-For	은닉
+0:	사용	안함,	1:	사용
+
+x_forward_user:	required	(one	of	0,	1)
+X-Forwarded-For	사용자	인증	연동
+0:	사용	안함,	1:	사용
+
+ps_ftp:	required	(integer)
+상태	기반	검사-FTP
+0:	사용	안함,	1:	사용
+
+ps_tr:	required	(integer)
+상태	기반	검사-Traceroute
+0:	사용	안함,	1:	사용
+
+use_backup:	required	(one	of	0,	1)
+정책	타임라인	사용	여부
+0:	사용	안함,	1:	사용
+
+(지원	버전:	2.0.0)
+
+hitcount:	required	(object)
+정책	Hit	수
+
+period1:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간1(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+period2:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간2(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+period3:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간3(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+period4:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간4(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+period5:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간5(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+after_time:	required	(string)
+기준	시간
+사용하지	않음
+
+Example:
+
+1970-01-01	00:00:00
+
+Example:
+
+{
+		"code":	"ok",
+		"result":	{
+				"shadow_rule_excpt":	0,
+				"auto_use_check":	1,
+				"apply_popup":	0,
+				"shadow_rule_check":	0,
+				"any_rule_check":	0,
+				"sess_manage":	1,
+				"sess_limit":	0,
+				"sess_limit_all_check":	1000,
+				"sess_limit_rule_check":	120,
+				"all_frag_pack_allow":	1,
+				"first_frag_check":	0,
+				"web_log":	0,
+				"web_cog":	0,
+				"x_forward_for":	0,
+				"x_forward_con":	0,
+				"x_forward_user":	0,
+				"ps_ftp":	1,
+				"ps_tr":	1,
+				"hitcount":	{
+						"after_time":	"2019-01-24	15:29:35",
+						"period1":	1,
+						"period2":	7,
+						"period3":	30,
+						"period4":	100,
+						"period5":	200
+				},
+				"use_backup":	1
+		}
+}
+
+HTTP	status	code	401
+
+인증	또는	인가되지	않음 (UNAUTHORIZED)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP	status	code	404
+
+리소스를	찾을	수	없음 (NOT	FOUND)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"12001",
+		"message":	"존재하지	않는	항목입니다."
+}
+
+PUT
+
+/fw/6/config
+
+IPv6	방화벽	고급	설정을(를)	수정한다.
+
+Request
+
+Headers
+
+Authorization:	required	(string)
+API	Token
+로그인	후	응답에	포함된	 api_token 을	설정
+
+Example:
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept:	required	(string)
+Example:
+
+application/json
+
+Content-Type:	required	(string)
+Example:
+
+application/json
+
+Accept-Language:	(one	of	ko,	en	-	default:	ko)
+언어	설정
+
+필수가	아니며	요청	시	설정되지	않으면	로그인	시	사용된	언어로	설정됩니다.
+한국어:	ko,	영어:	en
+
+Example:
+
+ko
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+shadow_rule_excpt:	required	(one	of	0,	1)
+정책	적용	시	Shadow	정책	자동	제외
+0:	사용	안함,	1:	사용
+
+auto_use_check:	required	(one	of	0,	1)
+정책	추가	시	사용	여부	자동	체크
+0:	사용	안함,	1:	사용
+
+apply_popup:	required	(one	of	0,	1)
+정책	적용	시	확인	창	팝업
+0:	사용	안함,	1:	사용
+
+shadow_rule_check:	required	(one	of	0,	1)
+정책	적용	시	Shadow	정책	확인
+0:	사용	안함,	1:	사용
+
+any_rule_check:	required	(one	of	0,	1)
+정책	적용	시	All	Any	정책	확인
+0:	사용	안함,	1:	사용
+
+sess_manage:	required	(one	of	1,	2,	3)
+정책	적용	시	방화벽	세션	관리
+1:	유지,	2:	재분류,	3:	삭제
+
+sess_limit:	required	(one	of	0,	1,	2)
+세션	제한
+0:	사용	안함,	1:	사용(전체	적용),	2:	사용(정책별	적용)
+
+sess_limit_all_check:	required	(integer	-	default:	1000	-	minimum:	60	-	maximum:	2000000)
+전체	적용(출발지	IP당	제한된	세션	수)
+
+sess_limit_rule_check:	required	(integer	-	default:	120	-	minimum:	1	-	maximum:	2592000)
+정책	적용(정책에서	차단	조건	선택	시	차단	시간(초))
+
+all_frag_pack_allow:	required	(one	of	0,	1)
+모든	조각	패킷	허용
+0:	사용	안함,	1:	사용
+
+first_frag_check:	required	(one	of	0,	1)
+첫	조각	패킷이	통과하지	않은	경우	차단
+0:	사용	안함,	1:	사용
+
+web_log:	required	(one	of	0,	1)
+웹	모니터링	URL	로깅
+0:	사용	안함,	1:	사용
+
+web_cog:	required	(one	of	0,	1)
+웹	모니터링	웹	인지
+0:	사용	안함,	1:	사용
+
+tcp_sess_start_log:	(one	of	0,	1)
+TCP	세션	시작	로그	사용
+0:	사용	안함,	1:	사용
+
+(Deprecated:	2.0.0부터	사용되지	않음)
+
+x_forward_for:	required	(one	of	0,	1)
+X-Forwarded-For	로깅
+0:	사용	안함,	1:	사용
+
+x_forward_con:	required	(one	of	0,	1)
+X-Forwarded-For	은닉
+0:	사용	안함,	1:	사용
+
+x_forward_user:	required	(one	of	0,	1)
+X-Forwarded-For	사용자	인증	연동
+0:	사용	안함,	1:	사용
+
+ps_ftp:	required	(integer)
+상태	기반	검사-FTP
+0:	사용	안함,	1:	사용
+
+ps_tr:	required	(integer)
+상태	기반	검사-Traceroute
+0:	사용	안함,	1:	사용
+
+use_backup:	required	(one	of	0,	1)
+정책	타임라인	사용	여부
+0:	사용	안함,	1:	사용
+
+(지원	버전:	2.0.0)
+
+hitcount:	required	(object)
+정책	Hit	수
+
+period1:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간1(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+period2:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간2(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+period3:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간3(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+period4:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간4(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+period5:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간5(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+Example:
+
+{
+		"shadow_rule_excpt":	0,
+		"auto_use_check":	1,
+		"apply_popup":	0,
+		"shadow_rule_check":	0,
+		"any_rule_check":	0,
+		"sess_manage":	1,
+		"sess_limit":	0,
+		"sess_limit_all_check":	1000,
+		"sess_limit_rule_check":	120,
+		"all_frag_pack_allow":	1,
+		"first_frag_check":	0,
+		"web_log":	0,
+		"web_cog":	0,
+		"x_forward_for":	0,
+		"x_forward_con":	0,
+		"x_forward_user":	0,
+		"ps_ftp":	1,
+		"ps_tr":	1,
+		"hitcount":	{
+				"period1":	1,
+				"period2":	7,
+				"period3":	30,
+				"period4":	100,
+				"period5":	200
+		},
+		"use_backup":	1
+}
+
+Response
+
+HTTP	status	code	200
+
+IPv6	방화벽	고급	설정	수정	성공
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+result:	required	(object)
+결과	데이터
+
+shadow_rule_excpt:	required	(one	of	0,	1)
+정책	적용	시	Shadow	정책	자동	제외
+0:	사용	안함,	1:	사용
+
+auto_use_check:	required	(one	of	0,	1)
+정책	추가	시	사용	여부	자동	체크
+0:	사용	안함,	1:	사용
+
+apply_popup:	required	(one	of	0,	1)
+정책	적용	시	확인	창	팝업
+0:	사용	안함,	1:	사용
+
+shadow_rule_check:	required	(one	of	0,	1)
+정책	적용	시	Shadow	정책	확인
+0:	사용	안함,	1:	사용
+
+any_rule_check:	required	(one	of	0,	1)
+정책	적용	시	All	Any	정책	확인
+0:	사용	안함,	1:	사용
+
+sess_manage:	required	(one	of	1,	2,	3)
+정책	적용	시	방화벽	세션	관리
+1:	유지,	2:	재분류,	3:	삭제
+
+sess_limit:	required	(one	of	0,	1,	2)
+세션	제한
+0:	사용	안함,	1:	사용(전체	적용),	2:	사용(정책별	적용)
+
+sess_limit_all_check:	required	(integer	-	default:	1000	-	minimum:	60	-	maximum:	2000000)
+전체	적용(출발지	IP당	제한된	세션	수)
+
+sess_limit_rule_check:	required	(integer	-	default:	120	-	minimum:	1	-	maximum:	2592000)
+정책	적용(정책에서	차단	조건	선택	시	차단	시간(초))
+
+all_frag_pack_allow:	required	(one	of	0,	1)
+모든	조각	패킷	허용
+0:	사용	안함,	1:	사용
+
+first_frag_check:	required	(one	of	0,	1)
+첫	조각	패킷이	통과하지	않은	경우	차단
+0:	사용	안함,	1:	사용
+
+web_log:	required	(one	of	0,	1)
+웹	모니터링	URL	로깅
+0:	사용	안함,	1:	사용
+
+web_cog:	required	(one	of	0,	1)
+웹	모니터링	웹	인지
+0:	사용	안함,	1:	사용
+
+tcp_sess_start_log:	(one	of	0,	1)
+TCP	세션	시작	로그	사용
+0:	사용	안함,	1:	사용
+
+(Deprecated:	2.0.0부터	사용되지	않음)
+
+x_forward_for:	required	(one	of	0,	1)
+X-Forwarded-For	로깅
+0:	사용	안함,	1:	사용
+
+x_forward_con:	required	(one	of	0,	1)
+X-Forwarded-For	은닉
+0:	사용	안함,	1:	사용
+
+x_forward_user:	required	(one	of	0,	1)
+X-Forwarded-For	사용자	인증	연동
+0:	사용	안함,	1:	사용
+
+ps_ftp:	required	(integer)
+상태	기반	검사-FTP
+0:	사용	안함,	1:	사용
+
+ps_tr:	required	(integer)
+상태	기반	검사-Traceroute
+0:	사용	안함,	1:	사용
+
+use_backup:	required	(one	of	0,	1)
+정책	타임라인	사용	여부
+0:	사용	안함,	1:	사용
+
+(지원	버전:	2.0.0)
+
+hitcount:	required	(object)
+정책	Hit	수
+
+period1:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간1(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+period2:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간2(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+period3:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간3(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+period4:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간4(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+period5:	required	(integer	-	minimum:	1	-	maximum:	365)
+기간5(다른	기간	속성들의	설정값과	중복될	수	없음)
+설정된	값이	없을	경우	null
+
+after_time:	required	(string)
+기준	시간
+사용하지	않음
+
+Example:
+
+1970-01-01	00:00:00
+
+Example:
+
+{
+		"code":	"ok",
+		"result":	{
+				"shadow_rule_excpt":	0,
+				"auto_use_check":	1,
+				"apply_popup":	0,
+				"shadow_rule_check":	0,
+				"any_rule_check":	0,
+				"sess_manage":	1,
+				"sess_limit":	0,
+				"sess_limit_all_check":	1000,
+				"sess_limit_rule_check":	120,
+				"all_frag_pack_allow":	1,
+				"first_frag_check":	0,
+				"web_log":	0,
+				"web_cog":	0,
+				"x_forward_for":	0,
+				"x_forward_con":	0,
+				"x_forward_user":	0,
+				"ps_ftp":	1,
+				"ps_tr":	1,
+				"hitcount":	{
+						"after_time":	"2019-01-24	15:29:35",
+						"period1":	1,
+						"period2":	7,
+						"period3":	30,
+						"period4":	100,
+						"period5":	200
+				},
+				"use_backup":	1
+		}
+}
+
+HTTP	status	code	400
+
+잘못된	요청 (BAD	REQUEST)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"12001",
+		"message":	"잘못된	값이	입력되었습니다."
+}
+
+HTTP	status	code	401
+
+인증	또는	인가되지	않음 (UNAUTHORIZED)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP	status	code	404
+
+리소스를	찾을	수	없음 (NOT	FOUND)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"12001",
+		"message":	"존재하지	않는	항목입니다."
+}
+
+정책	Hit	수	초기화
+
+PUT
+
+/fw/6/hitcount/statistics
+
+정책	Hit	수	초기화를	수행합니다.
+
+Request
+
+Headers
+
+Authorization:	required	(string)
+API	Token
+로그인	후	응답에	포함된	 api_token 을	설정
+
+Example:
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept:	required	(string)
+Example:
+
+application/json
+
+Content-Type:	required	(string)
+Example:
+
+application/json
+
+Accept-Language:	(one	of	ko,	en	-	default:	ko)
+언어	설정
+
+필수가	아니며	요청	시	설정되지	않으면	로그인	시	사용된	언어로	설정됩니다.
+한국어:	ko,	영어:	en
+
+Example:
+
+ko
+
+Response
+
+HTTP	status	code	200
+
+정책	Hit	수	초기화	수정	성공
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+result:	required	(object)
+결과	데이터
+
+Example:
+
+{
+		"code":	"ok",
+		"result":	{
+		}
+}
+
+HTTP	status	code	400
+
+잘못된	요청 (BAD	REQUEST)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"12001",
+		"message":	"잘못된	값이	입력되었습니다."
+}
+
+HTTP	status	code	401
+
+인증	또는	인가되지	않음 (UNAUTHORIZED)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP	status	code	404
+
+리소스를	찾을	수	없음 (NOT	FOUND)
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+message:	required	(string)
+결과	메시지
+
+dev_t:	(string)
+개발용	메시지
+
+Example:
+
+{
+		"code":	"12001",
+		"message":	"존재하지	않는	항목입니다."
+}
+
+IPv6	방화벽	고급	설정	적용/취소
+
+PUT
+
+/command/fw-6-config/apply
+
+IPv6	방화벽	설정을	적용합니다.
+
+Request
+
+Headers
+
+Authorization:	required	(string)
+API	Token
+로그인	후	응답에	포함된	 api_token 을	설정
+
+Example:
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept:	required	(string)
+Example:
+
+application/json
+
+Content-Type:	required	(string)
+Example:
+
+application/json
+
+Accept-Language:	(one	of	ko,	en	-	default:	ko)
+언어	설정
+
+필수가	아니며	요청	시	설정되지	않으면	로그인	시	사용된	언어로	설정됩니다.
+한국어:	ko,	영어:	en
+
+Example:
+
+ko
+
+Response
+
+HTTP	status	code	200
+
+IPv6	방화벽	설정	적용	성공
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+result:	required	(object)
+결과	데이터
+
+Example:
+
+{
+		"code":	"ok",
+		"result":	{}
+}
+
+PUT
+
+/command/fw-6-config/cancel
+
+IPv6	방화벽	설정을	취소합니다.
+
+Request
+
+Headers
+
+Authorization:	required	(string)
+API	Token
+로그인	후	응답에	포함된	 api_token 을	설정
+
+Example:
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept:	required	(string)
+Example:
+
+application/json
+
+Content-Type:	required	(string)
+Example:
+
+application/json
+
+Accept-Language:	(one	of	ko,	en	-	default:	ko)
+언어	설정
+
+필수가	아니며	요청	시	설정되지	않으면	로그인	시	사용된	언어로	설정됩니다.
+한국어:	ko,	영어:	en
+
+Example:
+
+ko
+
+Response
+
+HTTP	status	code	200
+
+IPv6	방화벽	설정	취소	성공
+
+Body
+
+Media	type:	application/json
+
+Type:	object
+
+Properties
+code:	required	(string)
+결과	코드
+
+result:	required	(object)
+결과	데이터
+
+Example:
+
+{
+		"code":	"ok",
+		"result":	{}
+}
+

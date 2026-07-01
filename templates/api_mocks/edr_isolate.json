@@ -1,0 +1,12 @@
+{
+  "endpoint": "/api/v1/endpoint/isolate",
+  "method": "POST",
+  "simulate_delay_ms": 1200,
+  "error_rate": 0.03,
+  "error_codes": [500, 404],
+  "response": {
+    "status_code": 200,
+    "content_type": "application/json",
+    "body": "{\n  \"status\": \"success\",\n  \"endpoint_id\": \"{{req.body.endpoint_id}}\",\n  \"hostname\": \"{{req.body.hostname}}\",\n  \"action\": \"isolate\",\n  \"initiated_at\": \"{{TIMESTAMP}}\",\n  \"message\": \"Endpoint isolation initiated successfully.\"\n}"
+  }
+}

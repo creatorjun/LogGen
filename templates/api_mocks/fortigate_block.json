@@ -1,0 +1,12 @@
+{
+  "endpoint": "/api/v2/cmdb/firewall/address",
+  "method": "POST",
+  "simulate_delay_ms": 500,
+  "error_rate": 0.05,
+  "error_codes": [500, 503],
+  "response": {
+    "status_code": 200,
+    "content_type": "application/json",
+    "body": "{\n  \"http_method\": \"POST\",\n  \"status\": \"success\",\n  \"http_status\": 200,\n  \"mkey\": \"{{req.body.name}}\",\n  \"revision\": \"{{TIMESTAMP}}\",\n  \"message\": \"Object successfully created.\"\n}"
+  }
+}

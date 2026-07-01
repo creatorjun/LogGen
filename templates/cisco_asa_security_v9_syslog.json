@@ -1,0 +1,17 @@
+{
+  "device": "Cisco ASA Series",
+  "vendor": "Cisco",
+  "format": {
+    "type": "PLAIN",
+    "raw": "ASA-$SEVERITY-305011 Built dynamic UDP translation from inside$SRC_IP$SRC_PORT to outside$DST_IP$DST_PORT"
+  },
+  "xml": {
+    "raw": "<Policy>\n  <Parser parser_key=\"{@parser_key}\" type=\"2\" regex=\"ASA-(\\d)-(\\d{6})\\s+Built dynamic\\s+(\\w+)\\s+translation from\\s+\\S+([0-9]{1,3}(?:\\.[0-9]{1,3}){3})(\\d{1,5})\\s+to\\s+\\S+([0-9]{1,3}(?:\\.[0-9]{1,3}){3})(\\d{1,5}).*\" arr_length=\"7\">\n    <Field position=\"0\" name=\"severity\" />\n    <Field position=\"1\" name=\"syslog_code\" />\n    <Field position=\"2\" name=\"prtc\" convert_tag=\"[[@toLowerCase()]]\" />\n    <Field position=\"3\" name=\"src_ip\" />\n    <Field position=\"4\" name=\"src_port\" />\n    <Field position=\"5\" name=\"dstn_ip\" />\n    <Field position=\"6\" name=\"dstn_port\" />\n    <Field position=\"7\" name=\"vendor\" convert_tag=\"[[@set(&apos;cisco&apos;)]]\" />\n    <Field position=\"8\" name=\"model\" convert_tag=\"[[@set(&apos;asaseries&apos;)]]\" />\n    <Field position=\"9\" name=\"logtype\" convert_tag=\"[[@set(&apos;threat&apos;)]]\" />\n    <Field position=\"10\" name=\"parser_version\" convert_tag=\"[[@set(&apos;v9&apos;)]]\" />\n    <Field position=\"11\" name=\"parser_info\" convert_tag=\"[[@set(&apos;[Cisco]_asaseries_security_v9_syslog&apos;)]]\" />\n    <Field position=\"12\" name=\"eqp_type\" convert_tag=\"[[@set(&apos;fw&apos;)]]\" />\n    <Field position=\"13\" name=\"original_log\" convert_tag=\"[[@originalLog()]]\" />\n  </Parser>\n</Policy>"
+  },
+  "scenarios": [
+    {
+      "attackName": "Dynamic UDP Translation",
+      "weight": 100
+    }
+  ]
+}

@@ -1,0 +1,3319 @@
+GET
+
+POST
+
+PUT
+
+  DELETE
+
+GET
+
+PUT
+
+  DELETE
+
+GET
+
+POST
+
+PUT
+
+  DELETE
+
+GET
+
+PUT
+
+  DELETE
+
+PUT
+
+PUT
+
+DLP 예외 프로파일 REST API 문서
+
+https://{url}/api/op
+
+urlurl: required (string)
+IP:PORT
+
+Example:
+Example
+
+https://192.168.100.100/api/op
+
+DLP 예외 프로파일
+
+/dlp/exceptions
+
+/dlp/exceptions/{pk}
+
+DLP 예외 객체
+
+/dlp/exceptions/{ppk}/objects
+
+/dlp/exceptions/{ppk}/objects/{pk}
+
+DLP 예외 프로파일 목록 적용/취소
+
+/command/dlp-exceptions/apply
+
+/command/dlp-exceptions/cancel
+
+DLP 예외 프로파일
+
+GET
+
+/dlp/exceptions
+
+DLP 예외 프로파일 목록을 조회한다.
+
+Request
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept: required (string)
+Accept
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent: required (string)
+User-Agent
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Response
+
+HTTP status code 200
+
+DLP 예외 프로파일 목록 조회 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+result
+result: required (array of DlpGetExcpt)
+결과 데이터
+
+Items: DlpGetExcpt
+Items
+
+useuse: required (one of 0, 1)
+사용여부
+사용안함:	0,	사용:	1
+
+name
+name: required (string - minLength: 1 - maxLength: 32)
+이름
+
+include
+include: required (one of 0, 1)
+적용대상
+제외:	0,	포함:	1
+
+descdesc: (string - maxLength: 128)
+설명
+
+dlp_excpt_prf_id
+dlp_excpt_prf_id: required (integer)
+예외 프로파일 ID(PK)
+
+ip_cnt
+ip_cnt: required (integer)
+프로파일에서 사용중인 주소객체 개수 (CLOAD 사용)
+GUI에서	사용하지	않음
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	[{
+				"dlp_excpt_prf_id":	1,
+				"use":	1,
+				"name":	"예외	프로파일	이름",
+				"desc":	"예외	프로파일	설명",
+				"include":	1,
+				"ip_cnt":	0
+		}]
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"dev_t":	"Authentication	Error"
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"dev_t":	"Authentication	Error",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+POST
+
+/dlp/exceptions
+
+DLP 예외 프로파일를 추가한다.
+
+Request
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept: required (string)
+Accept
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent: required (string)
+User-Agent
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+
+useuse: required (one of 0, 1)
+사용여부
+사용안함:	0,	사용:	1
+
+name
+name: required (string - minLength: 1 - maxLength: 32)
+이름
+
+include
+include: required (one of 0, 1)
+적용대상
+제외:	0,	포함:	1
+
+descdesc: (string - maxLength: 128)
+설명
+
+Example:
+Example
+
+{
+		"use":	1,
+		"name":	"New	예외	프로파일	이름",
+		"desc":	"New	예외	프로파일	설명",
+		"include":	1
+}
+
+Response
+
+HTTP status code 200
+
+DLP 예외 프로파일 추가 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+result
+result: required (object)
+결과 데이터
+
+useuse: required (one of 0, 1)
+사용여부
+사용안함:	0,	사용:	1
+
+name
+name: required (string - minLength: 1 - maxLength: 32)
+이름
+
+include
+include: required (one of 0, 1)
+적용대상
+제외:	0,	포함:	1
+
+descdesc: (string - maxLength: 128)
+설명
+
+dlp_excpt_prf_id
+dlp_excpt_prf_id: required (integer)
+예외 프로파일 ID(PK)
+
+ip_cnt
+ip_cnt: required (integer)
+프로파일에서 사용중인 주소객체 개수 (CLOAD 사용)
+GUI에서	사용하지	않음
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{
+				"dlp_excpt_prf_id":	2,
+				"use":	1,
+				"name":	"New	예외	프로파일	이름",
+				"desc":	"New	예외	프로파일	설명",
+				"include":	1,
+				"ip_cnt":	0
+		}
+}
+
+HTTP status code 400
+
+잘못된 요청 (BAD	REQUEST)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t: (string)
+dev_t
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"11000",
+		"message":	"중복되는	항목이	존재합니다."
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+PUT
+
+/dlp/exceptions
+
+DLP 예외 프로파일 목록을 (일괄)수정한다.
+
+Request
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept: required (string)
+Accept
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent
+User-Agent: required (string)
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+items
+items: required (array of object)
+수정될 정보 목록(최대 100건)
+
+Example:
+Example
+
+{
+		"items":	[
+				{"dlp_excpt_prf_id":	1,	"use":	0},
+				{"dlp_excpt_prf_id":	2,	"use":	0}
+		]
+}
+
+Response
+
+HTTP status code 200
+
+DLP 예외 프로파일 목록 수정 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (one of ok, pok, nok)
+결과 코드
+
+ok:	요청된	모든	항목	정상	처리
+pok:	요청	항목	중	일부	항목	오류
+nok:	요청된	전체	항목	오류
+
+result
+result: required (object)
+결과 데이터
+code	속성값이	'ok'가	아닐	경우	errors	속성이	포함됨
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{
+				"errors":	[
+				]
+		}
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+DELETE
+
+/dlp/exceptions
+
+DLP 예외 프로파일 목록을 (일괄)삭제한다.
+
+Request
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept
+Accept: required (string)
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent
+User-Agent: required (string)
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+items: required (array of object)
+items
+삭제될 정보 목록(최대 100건)
+
+Example:
+Example
+
+{
+		"items":	[
+				{"dlp_excpt_prf_id":	1},
+				{"dlp_excpt_prf_id":	2}
+		]
+}
+
+Response
+
+HTTP status code 200
+
+DLP 예외 프로파일 목록 삭제 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (one of ok, pok, nok)
+결과 코드
+
+ok:	요청된	모든	항목	정상	처리
+pok:	요청	항목	중	일부	항목	오류
+nok:	요청된	전체	항목	오류
+
+result
+result: required (object)
+결과 데이터
+code	속성값이	'ok'가	아닐	경우	errors	속성이	포함됨
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{
+				"errors":	[
+				]
+		}
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+GET
+
+/dlp/exceptions/{pk}
+
+DLP 예외 프로파일을(를) 조회한다.
+
+Request
+
+URI Parameters
+
+pkpk: required (integer)
+예외 프로파일 ID( dlp_excpt_prf_id )
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept: required (string)
+Accept
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent: required (string)
+User-Agent
+
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Response
+
+HTTP status code 200
+
+DLP 예외 프로파일 조회 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+result
+result: required (object)
+결과 데이터
+
+useuse: required (one of 0, 1)
+사용여부
+사용안함:	0,	사용:	1
+
+name
+name: required (string - minLength: 1 - maxLength: 32)
+이름
+
+include
+include: required (one of 0, 1)
+적용대상
+제외:	0,	포함:	1
+
+descdesc: (string - maxLength: 128)
+설명
+
+dlp_excpt_prf_id
+dlp_excpt_prf_id: required (integer)
+예외 프로파일 ID(PK)
+
+ip_cnt
+ip_cnt: required (integer)
+프로파일에서 사용중인 주소객체 개수 (CLOAD 사용)
+GUI에서	사용하지	않음
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{
+				"dlp_excpt_prf_id":	1,
+				"use":	1,
+				"name":	"예외	프로파일	이름",
+				"desc":	"예외	프로파일	설명",
+				"include":	1,
+				"ip_cnt":	0
+		}
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP status code 404
+
+리소스를 찾을 수 없음 (NOT	FOUND)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12001",
+		"message":	"존재하지	않는	항목입니다."
+}
+
+PUT
+
+/dlp/exceptions/{pk}
+
+DLP 프로파일 수정
+
+Request
+
+URI Parameters
+
+pkpk: required (integer)
+예외 프로파일 ID( dlp_excpt_prf_id )
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept
+Accept: required (string)
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent
+User-Agent: required (string)
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+
+useuse: required (one of 0, 1)
+사용여부
+사용안함:	0,	사용:	1
+
+name
+name: required (string - minLength: 1 - maxLength: 32)
+이름
+
+include: required (one of 0, 1)
+include
+적용대상
+제외:	0,	포함:	1
+
+descdesc: (string - maxLength: 128)
+설명
+
+Example:
+Example
+
+{
+		"use":	0,
+		"name":	"예외	프로파일	이름",
+		"desc":	"예외	프로파일	설명",
+		"include":	1
+}
+
+Response
+
+HTTP status code 200
+
+DLP 예외 프로파일 수정 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+result
+result: required (object)
+결과 데이터
+
+useuse: required (one of 0, 1)
+사용여부
+사용안함:	0,	사용:	1
+
+name
+name: required (string - minLength: 1 - maxLength: 32)
+이름
+
+include
+include: required (one of 0, 1)
+적용대상
+제외:	0,	포함:	1
+
+descdesc: (string - maxLength: 128)
+설명
+
+dlp_excpt_prf_id
+dlp_excpt_prf_id: required (integer)
+예외 프로파일 ID(PK)
+
+ip_cnt
+ip_cnt: required (integer)
+프로파일에서 사용중인 주소객체 개수 (CLOAD 사용)
+GUI에서	사용하지	않음
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{
+				"dlp_excpt_prf_id":	1,
+				"use":	0,
+				"name":	"예외	프로파일	이름",
+				"desc":	"예외	프로파일	설명",
+				"include":	1,
+				"ip_cnt":	0
+		}
+}
+
+HTTP status code 400
+
+잘못된 요청 (BAD	REQUEST)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12001",
+		"message":	"잘못된	값이	입력되었습니다."
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP status code 404
+
+리소스를 찾을 수 없음 (NOT	FOUND)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code: required (string)
+code
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12001",
+		"message":	"존재하지	않는	항목입니다."
+}
+
+DELETE
+
+/dlp/exceptions/{pk}
+
+DLP 예외 프로파일을(를) 삭제한다.
+
+Request
+
+URI Parameters
+
+pkpk: required (integer)
+예외 프로파일 ID( dlp_excpt_prf_id )
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept
+Accept: required (string)
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent
+User-Agent: required (string)
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Response
+
+HTTP status code 200
+
+DLP 예외 프로파일 삭제 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code: required (string)
+code
+결과 코드
+
+result
+result: required (object)
+결과 데이터
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{}
+}
+
+HTTP status code 400
+
+잘못된 요청 (BAD	REQUEST)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12004",
+		"message":	"다른	기능에서	사용	중입니다."
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP status code 404
+
+리소스를 찾을 수 없음 (NOT	FOUND)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message: required (string)
+message
+
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12001",
+		"message":	"존재하지	않는	항목입니다."
+}
+
+DLP 예외 객체
+
+GET
+
+/dlp/exceptions/{ppk}/objects
+
+DLP 예외 객체을(를) 조회한다.
+
+Request
+
+URI Parameters
+
+ppkppk: required (integer)
+예외 프로파일 ID( dlp_excpt_prf_id )
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept
+Accept: required (string)
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent
+User-Agent: required (string)
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Response
+
+HTTP status code 200
+
+DLP 예외 객체 조회 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+result: required (array of DlpGetExcptObject)
+result
+결과 데이터
+
+Items: DlpGetExcptObject
+Items
+
+useuse: required (one of 0, 1)
+
+사용여부
+사용안함:	0,	사용:	1
+
+ip_ver
+ip_ver: required (one of 1, 2)
+IP 버전
+IPv4:	1,	IPv6:	2
+
+descdesc: (string - maxLength: 128)
+설명
+
+dlp_excpt_prf_id
+dlp_excpt_prf_id: required (integer)
+예외 프로파일 ID
+
+dlp_excpt_id
+dlp_excpt_id: required (integer)
+예외 객체 ID
+
+addr_obj_list
+addr_obj_list: required (array of AddressObject)
+Items: AddressObject
+Items
+
+addr_obj_id: required (integer)
+addr_obj_id
+객체 ID
+
+name
+name: required (string)
+객체 명
+
+zone
+zone: required (one of 1, 2, 3)
+Zone 정보( 내부:	1,	외부:	2,	DMZ:	3 )
+
+addr_obj_type
+addr_obj_type: required (integer)
+객체 타입
+호스트객체:	1,	네트워크객체:	2	or	3,	그룹객체:	4,	도메인객체:	5
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	[{
+				"dlp_excpt_prf_id":	1,
+				"dlp_excpt_id":	1,
+				"use":	1,
+				"ip_ver":	1,
+				"addr_obj_list":	[
+						{
+								"addr_obj_id":	1,
+								"name":	"test_host_obj_1",
+								"zone":	1,
+								"addr_obj_type":	1
+						}
+				],
+				"desc":	"예외	객체	설명"
+		}]
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP status code 404
+
+리소스를 찾을 수 없음 (NOT	FOUND)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message: required (string)
+message
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12001",
+		"message":	"존재하지	않는	항목입니다."
+}
+
+POST
+
+/dlp/exceptions/{ppk}/objects
+
+DLP 예외 객체을(를) 추가한다.
+
+Request
+
+URI Parameters
+
+ppkppk: required (integer)
+예외 프로파일 ID( dlp_excpt_prf_id )
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept
+Accept: required (string)
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent
+User-Agent: required (string)
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+
+useuse: required (one of 0, 1)
+사용여부
+사용안함:	0,	사용:	1
+
+ip_ver
+ip_ver: required (one of 1, 2)
+IP 버전
+IPv4:	1,	IPv6:	2
+
+descdesc: (string - maxLength: 128)
+설명
+
+addr_obj_id
+addr_obj_id: required (array of integer)
+객체 ID 목록
+
+Example:
+Example
+
+{
+		"use":	1,
+		"ip_ver":	1,
+		"addr_obj_id":	[1,	2],
+		"desc":	"예외	객체	설명"
+}
+
+Response
+
+HTTP status code 200
+
+DLP 예외 객체 추가 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+result
+result: required (object)
+결과 데이터
+
+useuse: required (one of 0, 1)
+사용여부
+사용안함:	0,	사용:	1
+
+ip_ver
+ip_ver: required (one of 1, 2)
+IP 버전
+IPv4:	1,	IPv6:	2
+
+descdesc: (string - maxLength: 128)
+설명
+
+dlp_excpt_prf_id
+dlp_excpt_prf_id: required (integer)
+예외 프로파일 ID
+
+dlp_excpt_id
+dlp_excpt_id: required (integer)
+예외 객체 ID
+
+addr_obj_list
+addr_obj_list: required (array of AddressObject)
+Items: AddressObject
+Items
+
+addr_obj_id
+addr_obj_id: required (integer)
+객체 ID
+
+name
+name: required (string)
+객체 명
+
+zone: required (one of 1, 2, 3)
+zone
+Zone 정보( 내부:	1,	외부:	2,	DMZ:	3 )
+
+addr_obj_type
+addr_obj_type: required (integer)
+객체 타입
+호스트객체:	1,	네트워크객체:	2	or	3,	그룹객체:	4,	도메인객체:	5
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{
+				"dlp_excpt_prf_id":	1,
+				"dlp_excpt_id":	1,
+				"use":	1,
+				"ip_ver":	1,
+				"addr_obj_list":	[
+						{
+								"addr_obj_id":	1,
+								"name":	"test_host_obj_1",
+								"zone":	1,
+								"addr_obj_type":	1
+						},
+						{
+								"addr_obj_id":	2,
+								"name":	"test_host_obj_2",
+								"zone":	1,
+								"addr_obj_type":	1
+						}
+				],
+				"desc":	"예외	객체	설명"
+		}
+}
+
+HTTP status code 400
+
+잘못된 요청 (BAD	REQUEST)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"11000",
+		"message":	"중복되는	항목이	존재합니다."
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+PUT
+
+/dlp/exceptions/{ppk}/objects
+
+DLP 예외 객체을(를) 수정한다.
+
+Request
+
+URI Parameters
+
+ppkppk: required (integer)
+예외 프로파일 ID( dlp_excpt_prf_id )
+
+Headers
+
+Authorization: required (string)
+Authorization
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept
+Accept: required (string)
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent
+User-Agent: required (string)
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: any
+
+Example:
+Example
+
+{
+		"items":	[
+				{"dlp_excpt_id":	1,	"use":	0},
+				{"dlp_excpt_id":	2,	"use":	0}
+		]
+}
+
+Response
+
+HTTP status code 200
+
+DLP 예외 객체 수정 성공
+
+HTTP status code 400
+
+잘못된 요청 (BAD	REQUEST)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12001",
+		"message":	"잘못된	값이	입력되었습니다."
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code: required (string)
+code
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP status code 404
+
+리소스를 찾을 수 없음 (NOT	FOUND)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t: (string)
+dev_t
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12001",
+		"message":	"존재하지	않는	항목입니다."
+}
+
+DELETE
+
+/dlp/exceptions/{ppk}/objects
+
+DLP 예외 객체을(를) 삭제한다.
+
+Request
+
+URI Parameters
+
+ppkppk: required (integer)
+예외 프로파일 ID( dlp_excpt_prf_id )
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept: required (string)
+Accept
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent: required (string)
+User-Agent
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: any
+
+Example:
+Example
+
+{
+		"items":	[
+				{"dlp_excpt_id":	1},
+				{"dlp_excpt_id":	2}
+		]
+}
+
+Response
+
+HTTP status code 200
+
+DLP 예외 객체 삭제 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+result: required (object)
+result
+결과 데이터
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{}
+}
+
+HTTP status code 400
+
+잘못된 요청 (BAD	REQUEST)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12004",
+		"message":	"다른	기능에서	사용	중입니다."
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t: (string)
+dev_t
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP status code 404
+
+리소스를 찾을 수 없음 (NOT	FOUND)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12001",
+		"message":	"존재하지	않는	항목입니다."
+}
+
+GET
+
+/dlp/exceptions/{ppk}/objects/{pk}
+
+DLP 예외 객체을(를) 조회한다.
+
+Request
+
+URI Parameters
+
+ppkppk: required (integer)
+예외 프로파일 ID( dlp_excpt_prf_id )
+
+pkpk: required (integer)
+예외 객체 ID( dlp_excpt_id )
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept
+Accept: required (string)
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language: (one of ko, en, ja - default: ko)
+Accept-Language
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent
+User-Agent: required (string)
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Response
+
+HTTP status code 200
+
+DLP 예외 객체 조회 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code: required (string)
+code
+결과 코드
+
+result
+result: required (object)
+결과 데이터
+
+useuse: required (one of 0, 1)
+사용여부
+사용안함:	0,	사용:	1
+
+ip_ver
+ip_ver: required (one of 1, 2)
+IP 버전
+IPv4:	1,	IPv6:	2
+
+descdesc: (string - maxLength: 128)
+설명
+
+dlp_excpt_prf_id
+dlp_excpt_prf_id: required (integer)
+예외 프로파일 ID
+
+dlp_excpt_id
+dlp_excpt_id: required (integer)
+예외 객체 ID
+
+addr_obj_list
+addr_obj_list: required (array of AddressObject)
+Items: AddressObject
+Items
+
+addr_obj_id
+addr_obj_id: required (integer)
+객체 ID
+
+name
+name: required (string)
+객체 명
+
+zone
+zone: required (one of 1, 2, 3)
+Zone 정보( 내부:	1,	외부:	2,	DMZ:	3 )
+
+addr_obj_type
+addr_obj_type: required (integer)
+객체 타입
+호스트객체:	1,	네트워크객체:	2	or	3,	그룹객체:	4,	도메인객체:	5
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{
+				"dlp_excpt_prf_id":	1,
+				"dlp_excpt_id":	1,
+				"use":	1,
+				"ip_ver":	1,
+				"addr_obj_list":	[
+						{
+								"addr_obj_id":	1,
+								"name":	"test_host_obj_1",
+								"zone":	1,
+								"addr_obj_type":	1
+						},
+						{
+								"addr_obj_id":	2,
+								"name":	"test_host_obj_2",
+								"zone":	1,
+								"addr_obj_type":	1
+						}
+				],
+				"desc":	"예외	객체	설명"
+		}
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message: required (string)
+message
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP status code 404
+
+리소스를 찾을 수 없음 (NOT	FOUND)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message: required (string)
+message
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12001",
+		"message":	"존재하지	않는	항목입니다."
+}
+
+PUT
+
+/dlp/exceptions/{ppk}/objects/{pk}
+
+DLP 예외 객체을(를) 수정한다.
+
+Request
+
+URI Parameters
+
+ppkppk: required (integer)
+예외 프로파일 ID( dlp_excpt_prf_id )
+
+pkpk: required (integer)
+예외 객체 ID( dlp_excpt_id )
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept: required (string)
+Accept
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent: required (string)
+User-Agent
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+
+useuse: required (one of 0, 1)
+사용여부
+사용안함:	0,	사용:	1
+
+ip_ver: required (one of 1, 2)
+ip_ver
+IP 버전
+IPv4:	1,	IPv6:	2
+
+descdesc: (string - maxLength: 128)
+설명
+
+addr_obj_id: required (array of integer)
+addr_obj_id
+객체 ID 목록
+
+Example:
+Example
+
+{
+		"use":	0,
+		"ip_ver":	1,
+		"addr_obj_id":	[1],
+		"desc":	"예외	객체	설명"
+}
+
+Response
+
+HTTP status code 200
+
+DLP 예외 객체 수정 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+result
+result: required (object)
+결과 데이터
+
+useuse: required (one of 0, 1)
+사용여부
+사용안함:	0,	사용:	1
+
+ip_ver
+ip_ver: required (one of 1, 2)
+IP 버전
+IPv4:	1,	IPv6:	2
+
+descdesc: (string - maxLength: 128)
+설명
+
+dlp_excpt_prf_id
+dlp_excpt_prf_id: required (integer)
+예외 프로파일 ID
+
+dlp_excpt_id
+dlp_excpt_id: required (integer)
+예외 객체 ID
+
+addr_obj_list
+addr_obj_list: required (array of AddressObject)
+Items: AddressObject
+Items
+
+addr_obj_id
+addr_obj_id: required (integer)
+객체 ID
+
+name
+name: required (string)
+객체 명
+
+zone
+zone: required (one of 1, 2, 3)
+Zone 정보( 내부:	1,	외부:	2,	DMZ:	3 )
+
+addr_obj_type
+addr_obj_type: required (integer)
+객체 타입
+호스트객체:	1,	네트워크객체:	2	or	3,	그룹객체:	4,	도메인객체:	5
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{
+				"dlp_excpt_prf_id":	1,
+				"dlp_excpt_id":	1,
+				"use":	0,
+				"ip_ver":	1,
+				"addr_obj_list":	[
+						{
+								"addr_obj_id":	1,
+								"name":	"test_host_obj_1",
+								"zone":	1,
+								"addr_obj_type":	1
+						}
+				],
+				"desc":	"예외	객체	설명"
+		}
+}
+
+HTTP status code 400
+
+잘못된 요청 (BAD	REQUEST)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code: required (string)
+code
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12001",
+		"message":	"잘못된	값이	입력되었습니다."
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP status code 404
+
+리소스를 찾을 수 없음 (NOT	FOUND)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12001",
+		"message":	"존재하지	않는	항목입니다."
+}
+
+DELETE
+
+/dlp/exceptions/{ppk}/objects/{pk}
+
+DLP 예외 객체을(를) 삭제한다.
+
+Request
+
+URI Parameters
+
+ppkppk: required (integer)
+예외 프로파일 ID( dlp_excpt_prf_id )
+
+pkpk: required (integer)
+예외 객체 ID( dlp_excpt_id )
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept
+Accept: required (string)
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent
+User-Agent: required (string)
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Response
+
+HTTP status code 200
+
+DLP 예외 객체 삭제 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+result: required (object)
+result
+
+결과 데이터
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{}
+}
+
+HTTP status code 400
+
+잘못된 요청 (BAD	REQUEST)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code: required (string)
+code
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12004",
+		"message":	"다른	기능에서	사용	중입니다."
+}
+
+HTTP status code 401
+
+인증 또는 인가되지 않음 (UNAUTHORIZED)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"94011",
+		"message":	"인증되지	않은	상태에서	API가	요청되었습니다."
+}
+
+{
+		"code":	"94019",
+		"message":	"인가되지	않은	API	요청입니다."
+}
+
+HTTP status code 404
+
+리소스를 찾을 수 없음 (NOT	FOUND)
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+message
+message: required (string)
+결과 메시지
+
+dev_t
+dev_t: (string)
+개발용 메시지
+
+Example:
+Example
+
+{
+		"code":	"12001",
+		"message":	"존재하지	않는	항목입니다."
+}
+
+DLP 예외 프로파일 목록 적용/취소
+
+PUT
+
+/command/dlp-exceptions/apply
+
+DLP 예외 프로파일을 적용합니다.
+
+Request
+
+Headers
+
+Authorization
+Authorization: required (string)
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept
+Accept: required (string)
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent
+User-Agent: required (string)
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Example:
+Example
+
+{}
+
+Response
+
+HTTP status code 200
+
+DLP 예외 프로파일 적용 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code
+code: required (string)
+결과 코드
+
+result
+result: required (object)
+결과 데이터
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{}
+}
+
+PUT
+
+/command/dlp-exceptions/cancel
+
+DLP 예외 프로파일을 취소합니다.
+
+Request
+
+Headers
+
+Authorization: required (string)
+Authorization
+API Token
+로그인 후 응답에 포함된  api_token 을 설정
+
+Example:
+Example
+
+fd9b3a9e18ac461cb036a8ea9053985e
+
+Accept
+Accept: required (string)
+응답 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Content-Type
+Content-Type: required (string)
+요청 시 사용되는 MIME 타입은 JSON 형식이다.
+
+Example:
+Example
+
+application/json
+
+Accept-Language
+Accept-Language: (one of ko, en, ja - default: ko)
+언어 설정
+
+필수가 아니며 요청 시 설정되지 않으면 로그인 시 사용된 언어로 설정됩니다.
+한국어:	ko,	영어:	en,	일어:	ja
+
+Example:
+Example
+
+ko
+
+User-Agent
+User-Agent: required (string)
+User-Agent  HTTP 헤더
+웹 브라우저에서는 자동으로 설정되지만 서버 프로그램에서는 필수로 입력되어야 한다.
+인증 후 사용되는 모든 REST API를 호출할 때 필수 입력 사항이다.
+
+Example:
+Example
+
+Mozilla/5.0	(Windows	NT	10.0;	Win64;	x64)	AppleWebKit/537.36	(KHTML,	like	Gecko)	Chrome/84.0.4147.105	Safari/537.36
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Example:
+Example
+
+{}
+
+Response
+
+HTTP status code 200
+
+DLP 예외 프로파일 취소 성공
+
+Body
+
+Media type: application/json
+Media type
+
+TypeType: object
+
+Properties
+Properties
+code: required (string)
+code
+결과 코드
+
+result
+result: required (object)
+결과 데이터
+
+Example:
+Example
+
+{
+		"code":	"ok",
+		"result":	{}
+}
+

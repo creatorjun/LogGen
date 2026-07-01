@@ -1,0 +1,43 @@
+{
+  "id": "fortinet_fgt_traffic_v6_kvp",
+  "vendor": "fortinet",
+  "model": "fgt",
+  "logtype": "traffic",
+  "version": "v6",
+  "format": "KeyValue2",
+  "description": "Fortinet FortiGate Traffic v6 KeyValue2 - ISO8601 date, local subtype",
+  "sample": "date=2025-08-04T16:40:30,time=2025-08-04T16:40:30,devname=FGT-CORE,deviceid=FG200E3U16001717,logid=0100032001,type=traffic,subtype=local,pri=info,vd=root,src=23.202.231.169,dst=192.168.1.140,srcport=1021,dstport=7777,service=icmp,proto=TCP,duration=1,action=ALLOW,policyid=0",
+  "parser": {
+    "parserkey": "parserkey",
+    "type": 1,
+    "separator": "KeyValue2",
+    "arrlength": 18
+  },
+  "fields": [
+    { "position": 0,  "name": "date",        "converttag": "replace:'T',''replaceAll:',',''" },
+    { "position": 1,  "name": "logid" },
+    { "position": 2,  "name": "deviceid" },
+    { "position": 3,  "name": "dstnip",      "orgname": "dst" },
+    { "position": 4,  "name": "srcip",       "orgname": "src" },
+    { "position": 5,  "name": "pri" },
+    { "position": 6,  "name": "type" },
+    { "position": 7,  "name": "vd" },
+    { "position": 8,  "name": "srcport" },
+    { "position": 9,  "name": "duration" },
+    { "position": 10, "name": "policyid" },
+    { "position": 11, "name": "subtype" },
+    { "position": 12, "name": "service" },
+    { "position": 13, "name": "prtc",        "orgname": "proto", "converttag": "toLowerCase" },
+    { "position": 14, "name": "dstnport",    "orgname": "dstport" },
+    { "position": 15, "name": "action",      "converttag": "toLowerCase" },
+    { "position": 16, "name": "devname" },
+    { "position": 17, "name": "time" },
+    { "position": 18, "name": "vendor",      "converttag": "set:'fortinet'" },
+    { "position": 19, "name": "model",       "converttag": "set:'fgt'" },
+    { "position": 20, "name": "logtype",     "converttag": "set:'traffic'" },
+    { "position": 21, "name": "paserversion", "converttag": "set:'v6'" },
+    { "position": 22, "name": "originallog", "converttag": "originalLog" },
+    { "position": 23, "name": "parserinfo",  "converttag": "set:'fortinetfgttrafficv6keyvalue'" },
+    { "position": 24, "name": "eqptype",     "converttag": "set:'fw'" }
+  ]
+}
