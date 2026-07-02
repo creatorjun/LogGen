@@ -1,5 +1,6 @@
 // src/persistence/DefaultProfileFactory.cpp
 #include "DefaultProfileFactory.h"
+#include "core/LogFormatUtils.h"
 #include "logging/Logger.h"
 #include <nlohmann/json.hpp>
 #include <fstream>
@@ -52,7 +53,7 @@ DefaultProfileFactory::buildFromDirectory(const std::string& dirPath) {
 
             // format.type 서로 포맷 종류를 읽는다. 없으면 PLAIN
             const std::string fmtType = root["format"].value("type", std::string("PLAIN"));
-            format    = logFormatFromString(fmtType);
+            format    = LogFormatUtils::fromString(fmtType);
             formatRaw = root["format"]["raw"].get<std::string>();
 
             if (root.contains("xml") && root["xml"].contains("raw"))
