@@ -16,13 +16,8 @@
 #include "engine/IGeneratorEngine.h"
 #include "engine/LogDispatchQueue.h"
 #include "engine/TIPool.h"
+#include "engine/WorkerContext.h"
 #include "core/Constants.h"
-
-class ISender;
-class UDPSender;
-class FieldGenerator;
-class ScenarioSelector;
-class LogTemplateEngine;
 
 class GeneratorEngine : public IGeneratorEngine {
 public:
@@ -50,99 +45,38 @@ private:
     };
     using RefreshResult = std::expected<RefreshState, std::string>;
 
-    // workerIndex: 0-based index among workers sharing this profile
-    // totalWorkers: total number of workers for this profile
     void workerLoop(const std::string& profileId, int workerIndex, int totalWorkers);
     void dispatcherLoop();
     void pushWorkerError(std::string_view deviceId,
                          std::string_view deviceName,
                          std::string_view message);
 
-    // Spawn 'count' workers for a given profile, registering each worker key
     void spawnWorkers(const std::string& profileId, int count);
 
     [[nodiscard]] std::expected<void, std::string>
-        initWorkerSender(const DeviceProfile& p,
-                         std::unique_ptr<ISender>& senderBase,
-                         UDPSender*& udpSender);
+        initWorkerSender(WorkerContext& ctx);
 
     [[nodiscard]] RefreshResult
-        refreshProfile(const std::string&        profileId,
-                       uint64_t&                 knownVersion,
-                       DeviceProfile&            p,
-                       std::unique_ptr<ISender>& senderBase,
-                       UDPSender*&               udpSender,
-                       int&                      consecutiveFails,
-                       LogTemplateEngine&        templateEngine,
-                       FieldGenerator&           fieldGen,
-                       ScenarioSelector&         scenarioSelector,
-                       std::flat_map<std::string, std::string>& tokens,
-                       bool&                     prevBurstEnable,
-                       bool&                     inBurstMode,
-                       std::chrono::steady_clock::time_point& burstStartTime);
+        refreshProfile(WorkerContext& ctx);
 
-    void updateBurstState(const DeviceProfile& p,
-                          bool& inBurstMode,
-                          std::chrono::steady_clock::time_point& burstStartTime,
+    void updateBurstState(WorkerContext& ctx,
                           const std::chrono::steady_clock::time_point& now);
 
-    void buildBatch(const DeviceProfile& p,
-                    FieldGenerator&      fieldGen,
-                    ScenarioSelector&    scenarioSelector,
-                    LogTemplateEngine&   templateEngine,
-                    std::flat_map<std::string, std::string>& tokens,
-                    size_t               batchSize,
-                    uint64_t             nowMs,
-                    std::vector<std::string>& sendBuf,
-                    std::vector<LogEntry>&    dispatchBuf,
-                    char* srcPortBuf, char* dstPortBuf,
-                    char* pktBuf,     char* byteBuf);
+    void buildBatch(WorkerContext& ctx,
+                    size_t        batchSize,
+                    uint64_t      nowMs);
 
     [[nodiscard]] uint64_t
-        sendAndDispatch(const DeviceProfile& p,
-                        std::unique_ptr<ISender>& senderBase,
-                        UDPSender*               udpSender,
-                        int&                     consecutiveFails,
-                        std::chrono::steady_clock::time_point& lastReconnectAttempt,
-                        size_t                   batchSize,
-                        const std::vector<std::string>& sendBuf,
-                        const std::vector<LogEntry>&    dispatchBuf);
+        sendAndDispatch(WorkerContext& ctx, size_t batchSize);
 
-    void updateRateStats(uint64_t                sentCount,
-                         uint64_t&               logsSentInThisInterval,
-                         std::chrono::steady_clock::time_point& lastRateCalcTime,
-                         std::atomic<uint32_t>*  devRateFixed);
+    void updateRateStats(WorkerContext& ctx, uint64_t sentCount);
 
-    bool runTokenBatchPath(const std::string&       profileId,
-                           uint64_t&                knownVersion,
-                           DeviceProfile&           p,
-                           std::unique_ptr<ISender>& senderBase,
-                           UDPSender*&              udpSender,
-                           int&                     consecutiveFails,
-                           std::chrono::steady_clock::time_point& lastReconnectAttempt,
-                           LogTemplateEngine&       templateEngine,
-                           FieldGenerator&          fieldGen,
-                           ScenarioSelector&        scenarioSelector,
-                           std::flat_map<std::string, std::string>& tokens,
-                           bool&                    prevBurstEnable,
-                           bool&                    inBurstMode,
-                           std::chrono::steady_clock::time_point& burstStartTime,
-                           double&                  tokenBucket,
-                           std::chrono::steady_clock::time_point& tokenLastTime,
-                           double                   effectiveRate,
-                           size_t                   maxBatch,
-                           uint64_t                 nowMs,
-                           std::vector<std::string>& sendBuf,
-                           std::vector<LogEntry>&    dispatchBuf,
-                           char* srcPortBuf, char* dstPortBuf,
-                           char* pktBuf,     char* byteBuf,
-                           std::atomic<uint64_t>*   devCounter,
-                           std::atomic<uint32_t>*   devRateFixed,
-                           uint64_t&                logsSentInThisInterval,
-                           std::chrono::steady_clock::time_point& lastRateCalcTime,
-                           bool                     isFastPath);
+    bool runTokenBatchPath(WorkerContext& ctx,
+                           double         effectiveRate,
+                           size_t         maxBatch,
+                           uint64_t       nowMs,
+                           bool           isFastPath);
 
-    // Returns workerKey string for activeWorkers tracking: "profileId:workerIndex"
     static std::string workerKey(const std::string& profileId, int workerIndex) {
         return profileId + ':' + std::to_string(workerIndex);
     }
@@ -160,10 +94,9 @@ private:
     std::flat_map<std::string, DeviceProfile>                                  m_profileMap;
     std::flat_map<std::string, std::unique_ptr<std::atomic<uint64_t>>>         m_deviceCounters;
     std::flat_map<std::string, std::unique_ptr<std::atomic<uint32_t>>>         m_deviceRatesFixed;
-    // workers-per-profile tracking (protected by m_statsMutex)
     std::flat_map<std::string, int>                                            m_profileWorkerCount;
     std::atomic<uint64_t>                                                      m_totalSentCount{0};
-    std::flat_set<std::string>                                                 m_activeWorkers; // key = profileId:workerIndex
+    std::flat_set<std::string>                                                 m_activeWorkers;
 
     std::atomic<int> m_dateOffsetDays{0};
     TIPool           m_tiPool;

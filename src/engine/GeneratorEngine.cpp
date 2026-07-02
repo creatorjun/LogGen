@@ -1,7 +1,5 @@
 // src/engine/GeneratorEngine.cpp
 
-// NOMINMAX must be defined before ANY Windows header (including transitive ones)
-// to prevent min/max macro pollution that breaks std::accumulate / std::max.
 #ifdef _WIN32
 #  ifndef NOMINMAX
 #    define NOMINMAX
@@ -185,161 +183,138 @@ void GeneratorEngine::pushWorkerError(std::string_view deviceId,
 }
 
 std::expected<void, std::string>
-GeneratorEngine::initWorkerSender(const DeviceProfile& p,
-                                   std::unique_ptr<ISender>& senderBase,
-                                   UDPSender*& udpSender) {
-    senderBase = p.collector.useTCP
+GeneratorEngine::initWorkerSender(WorkerContext& ctx) {
+    const DeviceProfile& p = ctx.profile;
+    ctx.sender = p.collector.useTCP
         ? std::unique_ptr<ISender>(std::make_unique<TCPSender>())
         : std::unique_ptr<ISender>(std::make_unique<UDPSender>());
 
-    udpSender = p.collector.useTCP
+    ctx.udpSender = p.collector.useTCP
         ? nullptr
-        : static_cast<UDPSender*>(senderBase.get());
+        : static_cast<UDPSender*>(ctx.sender.get());
 
-    if (!senderBase->openConnection(p.collector.ip, p.collector.port))
+    if (!ctx.sender->openConnection(p.collector.ip, p.collector.port))
         return std::unexpected(std::format("Connection failed: {}:{}",
             p.collector.ip, p.collector.port));
     return {};
 }
 
 GeneratorEngine::RefreshResult
-GeneratorEngine::refreshProfile(
-        const std::string&       profileId,
-        uint64_t&                knownVersion,
-        DeviceProfile&           p,
-        std::unique_ptr<ISender>& senderBase,
-        UDPSender*&              udpSender,
-        int&                     consecutiveFails,
-        LogTemplateEngine&       templateEngine,
-        FieldGenerator&          fieldGen,
-        ScenarioSelector&        scenarioSelector,
-        std::flat_map<std::string, std::string>& tokens,
-        bool&                    prevBurstEnable,
-        bool&                    inBurstMode,
-        std::chrono::steady_clock::time_point& burstStartTime) {
-
+GeneratorEngine::refreshProfile(WorkerContext& ctx) {
     const uint64_t curVersion = m_profileVersion.load(std::memory_order_acquire);
-    if (curVersion == knownVersion)
+    if (curVersion == ctx.knownVersion)
         return RefreshState::kNoChange;
 
     DeviceProfile updated;
     {
         std::shared_lock lock(m_statsMutex);
-        auto it = m_profileMap.find(profileId);
+        auto it = m_profileMap.find(ctx.profileId);
         if (it == m_profileMap.end())
-            return std::unexpected(std::format("Profile not found: {}", profileId));
-        updated      = it->second;
-        knownVersion = curVersion;
+            return std::unexpected(std::format("Profile not found: {}", ctx.profileId));
+        updated          = it->second;
+        ctx.knownVersion = curVersion;
     }
 
     const bool collectorChanged =
-        updated.collector.useTCP != p.collector.useTCP ||
-        updated.collector.ip     != p.collector.ip     ||
-        updated.collector.port   != p.collector.port;
+        updated.collector.useTCP != ctx.profile.collector.useTCP ||
+        updated.collector.ip     != ctx.profile.collector.ip     ||
+        updated.collector.port   != ctx.profile.collector.port;
 
-    p = updated;
+    ctx.profile = updated;
 
     if (collectorChanged) {
-        if (auto res = initWorkerSender(p, senderBase, udpSender); !res) {
-            pushWorkerError(p.id, p.deviceName,
+        if (auto res = initWorkerSender(ctx); !res) {
+            pushWorkerError(ctx.profile.id, ctx.profile.deviceName,
                 std::format("Reconnect failed: {}", res.error()));
             return std::unexpected(res.error());
         }
-        consecutiveFails = 0;
+        ctx.consecutiveFails = 0;
         LOG_INFO("NETWORK", std::format("Collector connection updated: device={}, target={}:{}",
-            p.deviceName, p.collector.ip, p.collector.port));
+            ctx.profile.deviceName, ctx.profile.collector.ip, ctx.profile.collector.port));
     }
 
-    if (!templateEngine.loadTemplate(p.formatRaw)) {
-        const auto msg = std::format("Template reload failed: {}", p.deviceName);
-        pushWorkerError(p.id, p.deviceName, msg);
+    if (!ctx.templateEngine.loadTemplate(ctx.profile.formatRaw)) {
+        const auto msg = std::format("Template reload failed: {}", ctx.profile.deviceName);
+        pushWorkerError(ctx.profile.id, ctx.profile.deviceName, msg);
         return std::unexpected(msg);
     }
 
-    tokens["EQP_IP"] = p.eqpIp;
-    if (!p.event.srcIpRandom) tokens["SRC_IP"] = p.event.srcIp;
-    if (!p.event.dstIpRandom) tokens["DST_IP"] = p.event.dstIpFixed;
+    ctx.tokens["EQP_IP"] = ctx.profile.eqpIp;
+    if (!ctx.profile.event.srcIpRandom) ctx.tokens["SRC_IP"] = ctx.profile.event.srcIp;
+    if (!ctx.profile.event.dstIpRandom) ctx.tokens["DST_IP"] = ctx.profile.event.dstIpFixed;
 
-    if (!prevBurstEnable && p.scheduler.burstEnable) {
-        burstStartTime = std::chrono::steady_clock::now();
-        inBurstMode    = false;
+    if (!ctx.prevBurstEnable && ctx.profile.scheduler.burstEnable) {
+        ctx.burstStartTime = std::chrono::steady_clock::now();
+        ctx.inBurstMode    = false;
     }
-    prevBurstEnable = p.scheduler.burstEnable;
+    ctx.prevBurstEnable = ctx.profile.scheduler.burstEnable;
 
-    if (p.event.srcIpRandom) fieldGen.cacheIpRange(p.event.srcIpStart, p.event.srcIpEnd);
-    if (p.event.dstIpRandom) fieldGen.cacheDstIpRange(p.event.dstIpStart, p.event.dstIpEnd);
-    scenarioSelector.updateScenarios(p.event.scenarios);
+    if (ctx.profile.event.srcIpRandom)
+        ctx.fieldGen.cacheIpRange(ctx.profile.event.srcIpStart, ctx.profile.event.srcIpEnd);
+    if (ctx.profile.event.dstIpRandom)
+        ctx.fieldGen.cacheDstIpRange(ctx.profile.event.dstIpStart, ctx.profile.event.dstIpEnd);
+    ctx.scenarioSelector.updateScenarios(ctx.profile.event.scenarios);
 
     return collectorChanged ? RefreshState::kConnectionChanged : RefreshState::kUpdated;
 }
 
 void GeneratorEngine::updateBurstState(
-        const DeviceProfile& p,
-        bool&  inBurstMode,
-        std::chrono::steady_clock::time_point& burstStartTime,
+        WorkerContext& ctx,
         const std::chrono::steady_clock::time_point& now) {
-    if (!p.scheduler.burstEnable) {
-        inBurstMode = false;
+    if (!ctx.profile.scheduler.burstEnable) {
+        ctx.inBurstMode = false;
         return;
     }
     const float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now - burstStartTime).count() / 1000.0f;
-    if (!inBurstMode && elapsed >= p.scheduler.burstIntervalSec) {
-        inBurstMode    = true;
-        burstStartTime = now;
-    } else if (inBurstMode && elapsed >= p.scheduler.burstDurationSec) {
-        inBurstMode    = false;
-        burstStartTime = now;
+        now - ctx.burstStartTime).count() / 1000.0f;
+    if (!ctx.inBurstMode && elapsed >= ctx.profile.scheduler.burstIntervalSec) {
+        ctx.inBurstMode    = true;
+        ctx.burstStartTime = now;
+    } else if (ctx.inBurstMode && elapsed >= ctx.profile.scheduler.burstDurationSec) {
+        ctx.inBurstMode    = false;
+        ctx.burstStartTime = now;
     }
 }
 
 void GeneratorEngine::buildBatch(
-        const DeviceProfile& p,
-        FieldGenerator&      fieldGen,
-        ScenarioSelector&    scenarioSelector,
-        LogTemplateEngine&   templateEngine,
-        std::flat_map<std::string, std::string>& tokens,
-        size_t               batchSize,
-        uint64_t             nowMs,
-        std::vector<std::string>& sendBuf,
-        std::vector<LogEntry>&    dispatchBuf,
-        char* srcPortBuf, char* dstPortBuf,
-        char* pktBuf,     char* byteBuf) {
-
+        WorkerContext& ctx,
+        size_t         batchSize,
+        uint64_t       nowMs) {
+    const DeviceProfile& p = ctx.profile;
     const int  allowPct    = p.event.allowPct;
     const bool useTIPool   = p.event.useTIPool;
     const bool srcIpRandom = p.event.srcIpRandom;
     const bool dstIpRandom = p.event.dstIpRandom;
     const auto& dstPorts   = p.event.dstPorts;
 
-    TokenRefs r = resolveTokenRefs(tokens);
+    TokenRefs r = resolveTokenRefs(ctx.tokens);
 
     for (size_t bi = 0; bi < batchSize; ++bi) {
-        if (r.timestamp)    assignSV(*r.timestamp,    fieldGen.generateTimestamp());
-        if (r.date)         assignSV(*r.date,         fieldGen.generateDate());
-        if (r.time)         assignSV(*r.time,         fieldGen.generateTime());
-        if (r.attackSeqNum) assignSV(*r.attackSeqNum, fieldGen.generateSeqNum());
+        if (r.timestamp)    assignSV(*r.timestamp,    ctx.fieldGen.generateTimestamp());
+        if (r.date)         assignSV(*r.date,         ctx.fieldGen.generateDate());
+        if (r.time)         assignSV(*r.time,         ctx.fieldGen.generateTime());
+        if (r.attackSeqNum) assignSV(*r.attackSeqNum, ctx.fieldGen.generateSeqNum());
         if (srcIpRandom && r.srcIp)
-                            assignSV(*r.srcIp,        fieldGen.generateRandomSrcIp());
+                            assignSV(*r.srcIp,        ctx.fieldGen.generateRandomSrcIp());
         if (dstIpRandom && r.dstIp)
-                            assignSV(*r.dstIp,        fieldGen.generateRandomDstIp());
-        if (r.srcPort)  assignSV(*r.srcPort,  u32ToSV(fieldGen.generateRandomSrcPort(),       srcPortBuf, 8));
-        if (r.dstPort)  assignSV(*r.dstPort,  u32ToSV(fieldGen.generateRandomPort(dstPorts),  dstPortBuf, 8));
-        if (r.action)   assignSV(*r.action,   fieldGen.generateAction(allowPct));
-        if (r.attackName) assignSV(*r.attackName, scenarioSelector.selectAttackScenario());
-        if (r.severity) assignSV(*r.severity, fieldGen.generateSeverity());
-        if (r.proto)    assignSV(*r.proto,    fieldGen.generateProto());
-        if (r.priority) assignSV(*r.priority, fieldGen.generatePriority());
-        if (r.eventType) assignSV(*r.eventType, fieldGen.generateEventType());
-        if (r.connId)   assignSV(*r.connId,   fieldGen.generateConnId());
-        if (r.pid)      assignSV(*r.pid,      fieldGen.generatePid());
-        if (r.eventId)  assignSV(*r.eventId,  fieldGen.generateEventId());
-        if (r.username) assignSV(*r.username, fieldGen.generateUsername());
-        if (r.httpMethod) assignSV(*r.httpMethod, fieldGen.generateHttpMethod());
-        if (r.uri)      assignSV(*r.uri,      fieldGen.generateUri());
-        if (r.httpHost) assignSV(*r.httpHost, fieldGen.generateHttpHost());
-        if (r.pktCnt)   assignSV(*r.pktCnt,   u32ToSV(fieldGen.generateRandomCount(1,    100), pktBuf,  8));
-        if (r.byteCnt)  assignSV(*r.byteCnt,  u32ToSV(fieldGen.generateRandomCount(64, 65535), byteBuf, 8));
+                            assignSV(*r.dstIp,        ctx.fieldGen.generateRandomDstIp());
+        if (r.srcPort)  assignSV(*r.srcPort,  u32ToSV(ctx.fieldGen.generateRandomSrcPort(),       ctx.srcPortBuf, 8));
+        if (r.dstPort)  assignSV(*r.dstPort,  u32ToSV(ctx.fieldGen.generateRandomPort(dstPorts),  ctx.dstPortBuf, 8));
+        if (r.action)   assignSV(*r.action,   ctx.fieldGen.generateAction(allowPct));
+        if (r.attackName) assignSV(*r.attackName, ctx.scenarioSelector.selectAttackScenario());
+        if (r.severity) assignSV(*r.severity, ctx.fieldGen.generateSeverity());
+        if (r.proto)    assignSV(*r.proto,    ctx.fieldGen.generateProto());
+        if (r.priority) assignSV(*r.priority, ctx.fieldGen.generatePriority());
+        if (r.eventType) assignSV(*r.eventType, ctx.fieldGen.generateEventType());
+        if (r.connId)   assignSV(*r.connId,   ctx.fieldGen.generateConnId());
+        if (r.pid)      assignSV(*r.pid,      ctx.fieldGen.generatePid());
+        if (r.eventId)  assignSV(*r.eventId,  ctx.fieldGen.generateEventId());
+        if (r.username) assignSV(*r.username, ctx.fieldGen.generateUsername());
+        if (r.httpMethod) assignSV(*r.httpMethod, ctx.fieldGen.generateHttpMethod());
+        if (r.uri)      assignSV(*r.uri,      ctx.fieldGen.generateUri());
+        if (r.httpHost) assignSV(*r.httpHost, ctx.fieldGen.generateHttpHost());
+        if (r.pktCnt)   assignSV(*r.pktCnt,   u32ToSV(ctx.fieldGen.generateRandomCount(1,    100), ctx.pktBuf,  8));
+        if (r.byteCnt)  assignSV(*r.byteCnt,  u32ToSV(ctx.fieldGen.generateRandomCount(64, 65535), ctx.byteBuf, 8));
 
         if (r.tiIp       && r.srcIp)      *r.tiIp       = *r.srcIp;
         if (r.tiCategory && r.attackName) *r.tiCategory = *r.attackName;
@@ -361,51 +336,43 @@ void GeneratorEngine::buildBatch(
             }
         }
 
-        sendBuf.emplace_back(templateEngine.render(tokens));
+        ctx.sendBuf.emplace_back(ctx.templateEngine.render(ctx.tokens));
 
         LogEntry entry;
         entry.deviceId    = p.id;
         entry.deviceName  = p.deviceName;
-        entry.rawLog      = sendBuf.back();
+        entry.rawLog      = ctx.sendBuf.back();
         entry.timestampMs = nowMs;
-        dispatchBuf.push_back(std::move(entry));
+        ctx.dispatchBuf.push_back(std::move(entry));
     }
 }
 
-uint64_t GeneratorEngine::sendAndDispatch(
-        const DeviceProfile& p,
-        std::unique_ptr<ISender>& senderBase,
-        UDPSender*               udpSender,
-        int&                     consecutiveFails,
-        std::chrono::steady_clock::time_point& lastReconnectAttempt,
-        size_t                   batchSize,
-        const std::vector<std::string>& sendBuf,
-        const std::vector<LogEntry>&    dispatchBuf) {
-
+uint64_t GeneratorEngine::sendAndDispatch(WorkerContext& ctx, size_t batchSize) {
+    const DeviceProfile& p = ctx.profile;
     uint64_t sentCount = 0;
 
-    if (udpSender) {
-        sentCount = static_cast<uint64_t>(udpSender->sendBatchGetCount(sendBuf));
-        consecutiveFails = (sentCount > 0) ? 0 : consecutiveFails + 1;
+    if (ctx.udpSender) {
+        sentCount = static_cast<uint64_t>(ctx.udpSender->sendBatchGetCount(ctx.sendBuf));
+        ctx.consecutiveFails = (sentCount > 0) ? 0 : ctx.consecutiveFails + 1;
     } else {
-        if (senderBase->sendBatch(sendBuf)) {
-            sentCount        = static_cast<uint64_t>(batchSize);
-            consecutiveFails = 0;
+        if (ctx.sender->sendBatch(ctx.sendBuf)) {
+            sentCount            = static_cast<uint64_t>(batchSize);
+            ctx.consecutiveFails = 0;
         } else {
-            ++consecutiveFails;
+            ++ctx.consecutiveFails;
             LOG_WARN("NETWORK", std::format("sendBatch failed ({}/{}): device={}, target={}:{}",
-                consecutiveFails, Constants::Engine::kMaxConsecutiveFails,
+                ctx.consecutiveFails, Constants::Engine::kMaxConsecutiveFails,
                 p.deviceName, p.collector.ip, p.collector.port));
 
-            if (consecutiveFails >= Constants::Engine::kMaxConsecutiveFails) {
-                const auto elapsed = std::chrono::steady_clock::now() - lastReconnectAttempt;
+            if (ctx.consecutiveFails >= Constants::Engine::kMaxConsecutiveFails) {
+                const auto elapsed = std::chrono::steady_clock::now() - ctx.lastReconnectAttempt;
                 if (elapsed >= Constants::Engine::kReconnectInterval) {
-                    lastReconnectAttempt = std::chrono::steady_clock::now();
+                    ctx.lastReconnectAttempt = std::chrono::steady_clock::now();
                     LOG_WARN("NETWORK", std::format(
                         "Max consecutive failures reached, forcing reconnect: device={}",
                         p.deviceName));
-                    if (senderBase->openConnection(p.collector.ip, p.collector.port)) {
-                        consecutiveFails = 0;
+                    if (ctx.sender->openConnection(p.collector.ip, p.collector.port)) {
+                        ctx.consecutiveFails = 0;
                         LOG_INFO("NETWORK", std::format(
                             "Forced reconnect succeeded: device={}", p.deviceName));
                     } else {
@@ -418,83 +385,51 @@ uint64_t GeneratorEngine::sendAndDispatch(
     }
 
     if (sentCount > 0)
-        m_dispatchQueue.tryPushBatch(dispatchBuf, sentCount);
+        m_dispatchQueue.tryPushBatch(ctx.dispatchBuf, sentCount);
 
     return sentCount;
 }
 
-void GeneratorEngine::updateRateStats(
-        uint64_t                sentCount,
-        uint64_t&               logsSentInThisInterval,
-        std::chrono::steady_clock::time_point& lastRateCalcTime,
-        std::atomic<uint32_t>*  devRateFixed) {
-
-    logsSentInThisInterval += sentCount;
+void GeneratorEngine::updateRateStats(WorkerContext& ctx, uint64_t sentCount) {
+    ctx.logsSentInThisInterval += sentCount;
     const auto   rateNow = std::chrono::steady_clock::now();
     const double elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(
-        rateNow - lastRateCalcTime).count();
+        rateNow - ctx.lastRateCalcTime).count();
 
     if (elapsed >= Constants::Engine::kRateCalcIntervalSec) {
         const float rate = static_cast<float>(
-            static_cast<double>(logsSentInThisInterval) / elapsed);
-        if (devRateFixed)
-            devRateFixed->store(floatToFixed(rate), std::memory_order_relaxed);
-        logsSentInThisInterval = 0;
-        lastRateCalcTime       = rateNow;
+            static_cast<double>(ctx.logsSentInThisInterval) / elapsed);
+        if (ctx.devRateFixed)
+            ctx.devRateFixed->store(floatToFixed(rate), std::memory_order_relaxed);
+        ctx.logsSentInThisInterval = 0;
+        ctx.lastRateCalcTime       = rateNow;
     }
 }
 
 bool GeneratorEngine::runTokenBatchPath(
-        const std::string&       profileId,
-        uint64_t&                knownVersion,
-        DeviceProfile&           p,
-        std::unique_ptr<ISender>& senderBase,
-        UDPSender*&              udpSender,
-        int&                     consecutiveFails,
-        std::chrono::steady_clock::time_point& lastReconnectAttempt,
-        LogTemplateEngine&       templateEngine,
-        FieldGenerator&          fieldGen,
-        ScenarioSelector&        scenarioSelector,
-        std::flat_map<std::string, std::string>& tokens,
-        bool&                    prevBurstEnable,
-        bool&                    inBurstMode,
-        std::chrono::steady_clock::time_point& burstStartTime,
-        double&                  tokenBucket,
-        std::chrono::steady_clock::time_point& tokenLastTime,
-        double                   effectiveRate,
-        size_t                   maxBatch,
-        uint64_t                 nowMs,
-        std::vector<std::string>& sendBuf,
-        std::vector<LogEntry>&    dispatchBuf,
-        char* srcPortBuf, char* dstPortBuf,
-        char* pktBuf,     char* byteBuf,
-        std::atomic<uint64_t>*   devCounter,
-        std::atomic<uint32_t>*   devRateFixed,
-        uint64_t&                logsSentInThisInterval,
-        std::chrono::steady_clock::time_point& lastRateCalcTime,
-        bool                     isFastPath) {
+        WorkerContext& ctx,
+        double         effectiveRate,
+        size_t         maxBatch,
+        uint64_t       nowMs,
+        bool           isFastPath) {
 
     const auto   nowToken = std::chrono::steady_clock::now();
     const double dtSec    = std::chrono::duration_cast<std::chrono::duration<double>>(
-        nowToken - tokenLastTime).count();
-    tokenLastTime = nowToken;
+        nowToken - ctx.tokenLastTime).count();
+    ctx.tokenLastTime = nowToken;
 
-    tokenBucket += effectiveRate * dtSec;
+    ctx.tokenBucket += effectiveRate * dtSec;
     const double bucketCap = static_cast<double>(maxBatch) * 2.0;
-    if (tokenBucket > bucketCap)
-        tokenBucket = bucketCap;
+    if (ctx.tokenBucket > bucketCap)
+        ctx.tokenBucket = bucketCap;
 
-    if (tokenBucket < 1.0) {
+    if (ctx.tokenBucket < 1.0) {
         if (isFastPath) {
-            auto refreshRes = refreshProfile(
-                profileId, knownVersion, p,
-                senderBase, udpSender, consecutiveFails,
-                templateEngine, fieldGen, scenarioSelector,
-                tokens, prevBurstEnable, inBurstMode, burstStartTime);
+            auto refreshRes = refreshProfile(ctx);
             if (!refreshRes) return false;
             std::this_thread::yield();
         } else {
-            const double waitSec = (1.0 - tokenBucket) / effectiveRate;
+            const double waitSec = (1.0 - ctx.tokenBucket) / effectiveRate;
             std::this_thread::sleep_for(
                 std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                     std::chrono::duration<double>(waitSec)));
@@ -502,32 +437,23 @@ bool GeneratorEngine::runTokenBatchPath(
         return true;
     }
 
-    const size_t tokenSz   = static_cast<size_t>(tokenBucket);
+    const size_t tokenSz   = static_cast<size_t>(ctx.tokenBucket);
     const size_t batchSize = (tokenSz < maxBatch) ? tokenSz : maxBatch;
 
-    auto refreshRes = refreshProfile(
-        profileId, knownVersion, p,
-        senderBase, udpSender, consecutiveFails,
-        templateEngine, fieldGen, scenarioSelector,
-        tokens, prevBurstEnable, inBurstMode, burstStartTime);
+    auto refreshRes = refreshProfile(ctx);
     if (!refreshRes) return false;
 
-    buildBatch(p, fieldGen, scenarioSelector, templateEngine,
-        tokens, batchSize, nowMs,
-        sendBuf, dispatchBuf,
-        srcPortBuf, dstPortBuf, pktBuf, byteBuf);
+    buildBatch(ctx, batchSize, nowMs);
 
-    const uint64_t sentCount = sendAndDispatch(
-        p, senderBase, udpSender, consecutiveFails, lastReconnectAttempt,
-        batchSize, sendBuf, dispatchBuf);
+    const uint64_t sentCount = sendAndDispatch(ctx, batchSize);
 
-    tokenBucket -= static_cast<double>(sentCount);
+    ctx.tokenBucket -= static_cast<double>(sentCount);
 
     if (sentCount > 0) {
-        if (devCounter) devCounter->fetch_add(sentCount, std::memory_order_relaxed);
+        if (ctx.devCounter) ctx.devCounter->fetch_add(sentCount, std::memory_order_relaxed);
         m_totalSentCount.fetch_add(sentCount, std::memory_order_relaxed);
     }
-    updateRateStats(sentCount, logsSentInThisInterval, lastRateCalcTime, devRateFixed);
+    updateRateStats(ctx, sentCount);
     return true;
 }
 
@@ -545,19 +471,15 @@ void GeneratorEngine::start(const std::vector<DeviceProfile>& profiles) {
     stop();
     LOG_INFO("ENGINE", std::format("Engine start requested. profiles={}", profiles.size()));
 
-    // Collect enabled profiles
     std::vector<std::reference_wrapper<const DeviceProfile>> enabled;
     for (const auto& p : profiles)
         if (p.enabled) enabled.emplace_back(p);
 
     const int activeCount = static_cast<int>(enabled.size());
 
-    // Compute per-device worker allocation to fill the thread pool.
-    // Extra slots distributed proportionally to configured EPS.
     std::vector<int> workerCounts(activeCount, 1);
     const int remaining = m_poolSize - activeCount;
     if (remaining > 0 && activeCount > 0) {
-        // Gather EPS weights (floor at 1.0 to avoid zero-weight devices)
         std::vector<double> eps(activeCount);
         for (int i = 0; i < activeCount; ++i) {
             const double v = static_cast<double>(
@@ -568,16 +490,13 @@ void GeneratorEngine::start(const std::vector<DeviceProfile>& profiles) {
         double totalEps = 0.0;
         for (int i = 0; i < activeCount; ++i) totalEps += eps[i];
 
-        // Proportional share of extra slots
         std::vector<double> share(activeCount);
         for (int i = 0; i < activeCount; ++i)
             share[i] = (eps[i] / totalEps) * static_cast<double>(remaining);
 
-        // Floor allocation
         for (int i = 0; i < activeCount; ++i)
             workerCounts[i] += static_cast<int>(share[i]);
 
-        // Distribute leftover by largest remainder
         int allocated = 0;
         for (int i = 0; i < activeCount; ++i) allocated += workerCounts[i];
         int leftover = (m_poolSize - allocated);
@@ -699,147 +618,104 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
         return;
     }
 
-    DeviceProfile p;
-    uint64_t      knownVersion = 0;
-
-    std::atomic<uint64_t>* devCounter   = nullptr;
-    std::atomic<uint32_t>* devRateFixed = nullptr;
+    WorkerContext ctx;
+    ctx.profileId    = profileId;
+    ctx.workerIndex  = workerIndex;
+    ctx.totalWorkers = totalWorkers;
 
     {
         std::shared_lock lock(m_statsMutex);
         auto it = m_profileMap.find(profileId);
         if (it == m_profileMap.end()) return;
-        p            = it->second;
-        knownVersion = m_profileVersion.load(std::memory_order_acquire);
+        ctx.profile      = it->second;
+        ctx.knownVersion = m_profileVersion.load(std::memory_order_acquire);
 
         if (auto cit = m_deviceCounters.find(profileId); cit != m_deviceCounters.end())
-            devCounter = cit->second.get();
+            ctx.devCounter = cit->second.get();
         if (auto rit = m_deviceRatesFixed.find(profileId); rit != m_deviceRatesFixed.end())
-            devRateFixed = rit->second.get();
+            ctx.devRateFixed = rit->second.get();
     }
 
     LOG_INFO("ENGINE", std::format("Worker started for profileId={}, device={}",
-        profileId, p.deviceName));
+        profileId, ctx.profile.deviceName));
 
-    std::unique_ptr<ISender> senderBase;
-    UDPSender* udpSender = nullptr;
-
-    if (auto res = initWorkerSender(p, senderBase, udpSender); !res) {
-        pushWorkerError(p.id, p.deviceName, res.error());
+    if (auto res = initWorkerSender(ctx); !res) {
+        pushWorkerError(ctx.profile.id, ctx.profile.deviceName, res.error());
         std::unique_lock lock(m_statsMutex);
         m_activeWorkers.erase(wKey);
         return;
     }
 
-    LogTemplateEngine templateEngine;
-    if (!templateEngine.loadTemplate(p.formatRaw)) {
-        pushWorkerError(p.id, p.deviceName,
-            std::format("Template load failed (formatRaw empty): {}", p.deviceName));
+    if (!ctx.templateEngine.loadTemplate(ctx.profile.formatRaw)) {
+        pushWorkerError(ctx.profile.id, ctx.profile.deviceName,
+            std::format("Template load failed (formatRaw empty): {}", ctx.profile.deviceName));
         std::unique_lock lock(m_statsMutex);
         m_activeWorkers.erase(wKey);
         return;
     }
 
-    FieldGenerator fieldGen;
-    fieldGen.setDateOffsetDays(m_dateOffsetDays.load(std::memory_order_relaxed));
-    if (p.event.srcIpRandom) fieldGen.cacheIpRange(p.event.srcIpStart, p.event.srcIpEnd);
-    if (p.event.dstIpRandom) fieldGen.cacheDstIpRange(p.event.dstIpStart, p.event.dstIpEnd);
+    ctx.fieldGen.setDateOffsetDays(m_dateOffsetDays.load(std::memory_order_relaxed));
+    if (ctx.profile.event.srcIpRandom)
+        ctx.fieldGen.cacheIpRange(ctx.profile.event.srcIpStart, ctx.profile.event.srcIpEnd);
+    if (ctx.profile.event.dstIpRandom)
+        ctx.fieldGen.cacheDstIpRange(ctx.profile.event.dstIpStart, ctx.profile.event.dstIpEnd);
 
-    ScenarioSelector scenarioSelector;
-    scenarioSelector.updateScenarios(p.event.scenarios);
+    ctx.scenarioSelector.updateScenarios(ctx.profile.event.scenarios);
 
-    auto     lastRateCalcTime        = std::chrono::steady_clock::now();
-    uint64_t logsSentInThisInterval  = 0;
-    auto     burstStartTime          = std::chrono::steady_clock::now();
-    bool     inBurstMode             = false;
-    bool     prevBurstEnable         = p.scheduler.burstEnable;
+    ctx.lastRateCalcTime = std::chrono::steady_clock::now();
+    ctx.burstStartTime   = std::chrono::steady_clock::now();
+    ctx.tokenLastTime    = std::chrono::steady_clock::now();
+    ctx.prevBurstEnable  = ctx.profile.scheduler.burstEnable;
 
-    std::flat_map<std::string, std::string> tokens;
-    tokens["EQP_IP"]          = p.eqpIp;
-    tokens["TI_COUNTRY"]      = "UNKNOWN";
-    tokens["TI_COUNTRY_CODE"] = "ZZ";
-    tokens["TI_DESCRIPTION"]  = "N/A";
-    tokens["TI_SOURCE"]       = "LOCAL";
-    if (!p.event.srcIpRandom) tokens["SRC_IP"] = p.event.srcIp;
-    if (!p.event.dstIpRandom) tokens["DST_IP"] = p.event.dstIpFixed;
-    ensureTokenKeys(tokens);
+    ctx.tokens["EQP_IP"]          = ctx.profile.eqpIp;
+    ctx.tokens["TI_COUNTRY"]      = "UNKNOWN";
+    ctx.tokens["TI_COUNTRY_CODE"] = "ZZ";
+    ctx.tokens["TI_DESCRIPTION"]  = "N/A";
+    ctx.tokens["TI_SOURCE"]       = "LOCAL";
+    if (!ctx.profile.event.srcIpRandom) ctx.tokens["SRC_IP"] = ctx.profile.event.srcIp;
+    if (!ctx.profile.event.dstIpRandom) ctx.tokens["DST_IP"] = ctx.profile.event.dstIpFixed;
+    ensureTokenKeys(ctx.tokens);
 
-    char srcPortBuf[8], dstPortBuf[8], pktBuf[8], byteBuf[8];
+    ctx.sendBuf.reserve(Constants::Engine::kFastBatchSize);
+    ctx.dispatchBuf.reserve(Constants::Engine::kFastBatchSize);
 
-    std::vector<std::string> sendBuf;
-    sendBuf.reserve(Constants::Engine::kFastBatchSize);
-    std::vector<LogEntry> dispatchBuf;
-    dispatchBuf.reserve(Constants::Engine::kFastBatchSize);
-
-    int  consecutiveFails     = 0;
-    auto lastReconnectAttempt = std::chrono::steady_clock::time_point{};
-
-    double tokenBucket   = 0.0;
-    auto   tokenLastTime = std::chrono::steady_clock::now();
-
-    // Each worker handles (1/totalWorkers) of the profile's total rate
     const double workerRateDivisor = static_cast<double>(totalWorkers);
 
     while (m_running.load(std::memory_order_relaxed)) {
-        if (!p.enabled) {
+        if (!ctx.profile.enabled) {
             m_running.wait(true, std::memory_order_relaxed);
             if (!m_running.load(std::memory_order_relaxed)) break;
-            auto refreshRes = refreshProfile(
-                profileId, knownVersion, p,
-                senderBase, udpSender, consecutiveFails,
-                templateEngine, fieldGen, scenarioSelector,
-                tokens, prevBurstEnable, inBurstMode, burstStartTime);
+            auto refreshRes = refreshProfile(ctx);
             if (!refreshRes) break;
             continue;
         }
 
         const auto now = std::chrono::steady_clock::now();
-        updateBurstState(p, inBurstMode, burstStartTime, now);
+        updateBurstState(ctx, now);
 
-        const double normalEps = static_cast<double>(p.scheduler.normalRateToEps());
-        const double burstEps  = static_cast<double>(p.scheduler.burstRateToEps());
-        const double totalRate = inBurstMode
+        const double normalEps = static_cast<double>(ctx.profile.scheduler.normalRateToEps());
+        const double burstEps  = static_cast<double>(ctx.profile.scheduler.burstRateToEps());
+        const double totalRate = ctx.inBurstMode
             ? (burstEps  <= 0.0 ? 1.0 : burstEps)
             : (normalEps <= 0.0 ? 1.0 : normalEps);
 
-        // Divide configured rate evenly across parallel workers for this profile
         const double effectiveRate = totalRate / workerRateDivisor;
 
         const uint64_t nowMs = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::system_clock::now().time_since_epoch()).count());
 
-        sendBuf.clear();
-        dispatchBuf.clear();
+        ctx.sendBuf.clear();
+        ctx.dispatchBuf.clear();
 
         if (effectiveRate >= Constants::Engine::kFastPathThreshold) {
-            if (!runTokenBatchPath(
-                    profileId, knownVersion, p,
-                    senderBase, udpSender, consecutiveFails, lastReconnectAttempt,
-                    templateEngine, fieldGen, scenarioSelector,
-                    tokens, prevBurstEnable, inBurstMode, burstStartTime,
-                    tokenBucket, tokenLastTime,
-                    effectiveRate, Constants::Engine::kFastBatchSize, nowMs,
-                    sendBuf, dispatchBuf,
-                    srcPortBuf, dstPortBuf, pktBuf, byteBuf,
-                    devCounter, devRateFixed,
-                    logsSentInThisInterval, lastRateCalcTime,
-                    true))
+            if (!runTokenBatchPath(ctx, effectiveRate,
+                    Constants::Engine::kFastBatchSize, nowMs, true))
                 break;
 
         } else if (effectiveRate >= Constants::Engine::kMidPathThreshold) {
-            if (!runTokenBatchPath(
-                    profileId, knownVersion, p,
-                    senderBase, udpSender, consecutiveFails, lastReconnectAttempt,
-                    templateEngine, fieldGen, scenarioSelector,
-                    tokens, prevBurstEnable, inBurstMode, burstStartTime,
-                    tokenBucket, tokenLastTime,
-                    effectiveRate, Constants::Engine::kBatchSize, nowMs,
-                    sendBuf, dispatchBuf,
-                    srcPortBuf, dstPortBuf, pktBuf, byteBuf,
-                    devCounter, devRateFixed,
-                    logsSentInThisInterval, lastRateCalcTime,
-                    false))
+            if (!runTokenBatchPath(ctx, effectiveRate,
+                    Constants::Engine::kBatchSize, nowMs, false))
                 break;
 
         } else {
@@ -850,27 +726,18 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
                 std::chrono::steady_clock::duration>(
                     std::chrono::duration<double>(batchIntervalSec));
 
-            auto refreshRes = refreshProfile(
-                profileId, knownVersion, p,
-                senderBase, udpSender, consecutiveFails,
-                templateEngine, fieldGen, scenarioSelector,
-                tokens, prevBurstEnable, inBurstMode, burstStartTime);
+            auto refreshRes = refreshProfile(ctx);
             if (!refreshRes) break;
 
-            buildBatch(p, fieldGen, scenarioSelector, templateEngine,
-                tokens, currentBatchSize, nowMs,
-                sendBuf, dispatchBuf,
-                srcPortBuf, dstPortBuf, pktBuf, byteBuf);
+            buildBatch(ctx, currentBatchSize, nowMs);
 
-            const uint64_t sentCount = sendAndDispatch(
-                p, senderBase, udpSender, consecutiveFails, lastReconnectAttempt,
-                currentBatchSize, sendBuf, dispatchBuf);
+            const uint64_t sentCount = sendAndDispatch(ctx, currentBatchSize);
 
             if (sentCount > 0) {
-                if (devCounter) devCounter->fetch_add(sentCount, std::memory_order_relaxed);
+                if (ctx.devCounter) ctx.devCounter->fetch_add(sentCount, std::memory_order_relaxed);
                 m_totalSentCount.fetch_add(sentCount, std::memory_order_relaxed);
             }
-            updateRateStats(sentCount, logsSentInThisInterval, lastRateCalcTime, devRateFixed);
+            updateRateStats(ctx, sentCount);
 
             std::this_thread::sleep_until(nextLoopTime);
         }
@@ -881,7 +748,7 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
         m_activeWorkers.erase(wKey);
     }
     LOG_INFO("ENGINE", std::format("Worker stopped for profileId={}, device={}",
-        profileId, p.deviceName));
+        profileId, ctx.profile.deviceName));
 }
 
 uint64_t GeneratorEngine::getTotalSent() const {
