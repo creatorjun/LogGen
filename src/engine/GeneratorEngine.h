@@ -17,6 +17,7 @@
 #include "engine/LogDispatchQueue.h"
 #include "engine/TIPool.h"
 #include "engine/WorkerContext.h"
+#include "engine/WorkerAllocationStrategy.h"
 #include "core/Constants.h"
 
 class GeneratorEngine : public IGeneratorEngine {
