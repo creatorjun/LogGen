@@ -13,7 +13,7 @@ public:
     [[nodiscard]] std::expected<void, std::string>
         connect(const DeviceProfile& p);
 
-    [[nodiscard]] bool reconnectIfNeeded(const DeviceProfile& p);
+    bool reconnectIfNeeded(const DeviceProfile& p);
 
     [[nodiscard]] ISender*   sender()    noexcept { return m_sender.get(); }
     [[nodiscard]] UDPSender* udpSender() noexcept { return m_udpSender; }
