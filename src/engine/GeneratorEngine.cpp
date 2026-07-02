@@ -18,7 +18,7 @@
 #include <algorithm>
 
 #ifdef _WIN32
-#define NOMINMAX          // windows.h 의 min/max 매크로 비활성화
+#define NOMINMAX
 #include <windows.h>
 #include <timeapi.h>
 #pragma comment(lib, "winmm.lib")
@@ -35,6 +35,82 @@ static inline uint32_t floatToFixed(float v)    { return static_cast<uint32_t>(v
 static inline void assignSV(std::string& dst, std::string_view sv) {
     dst.assign(sv.data(), sv.size());
 }
+
+namespace {
+
+struct TokenRefs {
+    std::string* timestamp;
+    std::string* date;
+    std::string* time;
+    std::string* attackSeqNum;
+    std::string* srcIp;
+    std::string* dstIp;
+    std::string* srcPort;
+    std::string* dstPort;
+    std::string* action;
+    std::string* attackName;
+    std::string* severity;
+    std::string* proto;
+    std::string* priority;
+    std::string* eventType;
+    std::string* connId;
+    std::string* pid;
+    std::string* eventId;
+    std::string* username;
+    std::string* httpMethod;
+    std::string* uri;
+    std::string* httpHost;
+    std::string* pktCnt;
+    std::string* byteCnt;
+    std::string* tiIp;
+    std::string* tiCategory;
+    std::string* tiSeverity;
+    std::string* tiCountry;
+    std::string* tiCountryCode;
+    std::string* tiDescription;
+    std::string* tiSource;
+};
+
+TokenRefs resolveTokenRefs(std::flat_map<std::string, std::string>& tokens) {
+    auto get = [&](const char* key) -> std::string* {
+        auto it = tokens.find(key);
+        return (it != tokens.end()) ? &it->second : nullptr;
+    };
+    return TokenRefs{
+        .timestamp     = get("TIMESTAMP"),
+        .date          = get("DATE"),
+        .time          = get("TIME"),
+        .attackSeqNum  = get("ATTACK_SEQ_NUM"),
+        .srcIp         = get("SRC_IP"),
+        .dstIp         = get("DST_IP"),
+        .srcPort       = get("SRC_PORT"),
+        .dstPort       = get("DST_PORT"),
+        .action        = get("ACTION"),
+        .attackName    = get("ATTACK_NAME"),
+        .severity      = get("SEVERITY"),
+        .proto         = get("PROTO"),
+        .priority      = get("PRIORITY"),
+        .eventType     = get("EVENT_TYPE"),
+        .connId        = get("CONN_ID"),
+        .pid           = get("PID"),
+        .eventId       = get("EVENT_ID"),
+        .username      = get("USERNAME"),
+        .httpMethod    = get("HTTP_METHOD"),
+        .uri           = get("URI"),
+        .httpHost      = get("HTTP_HOST"),
+        .pktCnt        = get("PKT_CNT"),
+        .byteCnt       = get("BYTE_CNT"),
+        .tiIp          = get("TI_IP"),
+        .tiCategory    = get("TI_CATEGORY"),
+        .tiSeverity    = get("TI_SEVERITY"),
+        .tiCountry     = get("TI_COUNTRY"),
+        .tiCountryCode = get("TI_COUNTRY_CODE"),
+        .tiDescription = get("TI_DESCRIPTION"),
+        .tiSource      = get("TI_SOURCE"),
+    };
+}
+
+} // namespace
 
 GeneratorEngine::GeneratorEngine(int threadPoolSize, size_t queueCapacity)
     : m_poolSize(threadPoolSize)
@@ -204,50 +280,52 @@ void GeneratorEngine::buildBatch(
     const bool dstIpRandom = p.event.dstIpRandom;
     const auto& dstPorts   = p.event.dstPorts;
 
-    for (size_t bi = 0; bi < batchSize; ++bi) {
-        assignSV(tokens["TIMESTAMP"],     fieldGen.generateTimestamp());
-        assignSV(tokens["DATE"],           fieldGen.generateDate());
-        assignSV(tokens["TIME"],           fieldGen.generateTime());
-        assignSV(tokens["ATTACK_SEQ_NUM"], fieldGen.generateSeqNum());
-        if (srcIpRandom)
-            assignSV(tokens["SRC_IP"],     fieldGen.generateRandomSrcIp());
-        if (dstIpRandom)
-            assignSV(tokens["DST_IP"],     fieldGen.generateRandomDstIp());
-        assignSV(tokens["SRC_PORT"],       u32ToSV(fieldGen.generateRandomSrcPort(),        srcPortBuf, 8));
-        assignSV(tokens["DST_PORT"],       u32ToSV(fieldGen.generateRandomPort(dstPorts),   dstPortBuf, 8));
-        assignSV(tokens["ACTION"],         fieldGen.generateAction(allowPct));
-        assignSV(tokens["ATTACK_NAME"],    scenarioSelector.selectAttackScenario());
-        assignSV(tokens["SEVERITY"],       fieldGen.generateSeverity());
-        assignSV(tokens["PROTO"],          fieldGen.generateProto());
-        assignSV(tokens["PRIORITY"],       fieldGen.generatePriority());
-        assignSV(tokens["EVENT_TYPE"],     fieldGen.generateEventType());
-        assignSV(tokens["CONN_ID"],        fieldGen.generateConnId());
-        assignSV(tokens["PID"],            fieldGen.generatePid());
-        assignSV(tokens["EVENT_ID"],       fieldGen.generateEventId());
-        assignSV(tokens["USERNAME"],       fieldGen.generateUsername());
-        assignSV(tokens["HTTP_METHOD"],    fieldGen.generateHttpMethod());
-        assignSV(tokens["URI"],            fieldGen.generateUri());
-        assignSV(tokens["HTTP_HOST"],      fieldGen.generateHttpHost());
-        assignSV(tokens["PKT_CNT"],        u32ToSV(fieldGen.generateRandomCount(1,    100), pktBuf,  8));
-        assignSV(tokens["BYTE_CNT"],       u32ToSV(fieldGen.generateRandomCount(64, 65535), byteBuf, 8));
+    TokenRefs r = resolveTokenRefs(tokens);
 
-        tokens["TI_IP"]       = tokens["SRC_IP"];
-        tokens["TI_CATEGORY"] = tokens["ATTACK_NAME"];
-        tokens["TI_SEVERITY"] = tokens["SEVERITY"];
+    for (size_t bi = 0; bi < batchSize; ++bi) {
+        if (r.timestamp)    assignSV(*r.timestamp,    fieldGen.generateTimestamp());
+        if (r.date)         assignSV(*r.date,         fieldGen.generateDate());
+        if (r.time)         assignSV(*r.time,         fieldGen.generateTime());
+        if (r.attackSeqNum) assignSV(*r.attackSeqNum, fieldGen.generateSeqNum());
+        if (srcIpRandom && r.srcIp)
+                            assignSV(*r.srcIp,        fieldGen.generateRandomSrcIp());
+        if (dstIpRandom && r.dstIp)
+                            assignSV(*r.dstIp,        fieldGen.generateRandomDstIp());
+        if (r.srcPort)  assignSV(*r.srcPort,  u32ToSV(fieldGen.generateRandomSrcPort(),       srcPortBuf, 8));
+        if (r.dstPort)  assignSV(*r.dstPort,  u32ToSV(fieldGen.generateRandomPort(dstPorts),  dstPortBuf, 8));
+        if (r.action)   assignSV(*r.action,   fieldGen.generateAction(allowPct));
+        if (r.attackName) assignSV(*r.attackName, scenarioSelector.selectAttackScenario());
+        if (r.severity) assignSV(*r.severity, fieldGen.generateSeverity());
+        if (r.proto)    assignSV(*r.proto,    fieldGen.generateProto());
+        if (r.priority) assignSV(*r.priority, fieldGen.generatePriority());
+        if (r.eventType) assignSV(*r.eventType, fieldGen.generateEventType());
+        if (r.connId)   assignSV(*r.connId,   fieldGen.generateConnId());
+        if (r.pid)      assignSV(*r.pid,      fieldGen.generatePid());
+        if (r.eventId)  assignSV(*r.eventId,  fieldGen.generateEventId());
+        if (r.username) assignSV(*r.username, fieldGen.generateUsername());
+        if (r.httpMethod) assignSV(*r.httpMethod, fieldGen.generateHttpMethod());
+        if (r.uri)      assignSV(*r.uri,      fieldGen.generateUri());
+        if (r.httpHost) assignSV(*r.httpHost, fieldGen.generateHttpHost());
+        if (r.pktCnt)   assignSV(*r.pktCnt,   u32ToSV(fieldGen.generateRandomCount(1,    100), pktBuf,  8));
+        if (r.byteCnt)  assignSV(*r.byteCnt,  u32ToSV(fieldGen.generateRandomCount(64, 65535), byteBuf, 8));
+
+        if (r.tiIp       && r.srcIp)     *r.tiIp       = *r.srcIp;
+        if (r.tiCategory && r.attackName) *r.tiCategory = *r.attackName;
+        if (r.tiSeverity && r.severity)  *r.tiSeverity = *r.severity;
 
         if (useTIPool && !m_tiPool.empty()) {
             const TIEntry ti = m_tiPool.getRandomTI();
             if (!ti.ip.empty()) {
-                tokens["SRC_IP"]          = ti.ip;
-                tokens["TI_IP"]           = ti.ip;
-                tokens["TI_COUNTRY"]      = ti.countryName;
-                tokens["TI_COUNTRY_CODE"] = ti.countryCode;
-                tokens["TI_CATEGORY"]     = ti.category;
-                tokens["TI_SEVERITY"]     = ti.severity;
-                tokens["TI_DESCRIPTION"]  = ti.description;
-                tokens["TI_SOURCE"]       = ti.source;
-                tokens["ATTACK_NAME"]     = ti.category;
-                tokens["SEVERITY"]        = ti.severity;
+                if (r.srcIp)         *r.srcIp         = ti.ip;
+                if (r.tiIp)          *r.tiIp          = ti.ip;
+                if (r.tiCountry)     *r.tiCountry     = ti.countryName;
+                if (r.tiCountryCode) *r.tiCountryCode = ti.countryCode;
+                if (r.tiCategory)    *r.tiCategory    = ti.category;
+                if (r.tiSeverity)    *r.tiSeverity    = ti.severity;
+                if (r.tiDescription) *r.tiDescription = ti.description;
+                if (r.tiSource)      *r.tiSource      = ti.source;
+                if (r.attackName)    *r.attackName    = ti.category;
+                if (r.severity)      *r.severity      = ti.severity;
             }
         }
 
@@ -561,7 +639,7 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
                 continue;
             }
 
-            const size_t tokenSz  = static_cast<size_t>(tokenBucket);
+            const size_t tokenSz   = static_cast<size_t>(tokenBucket);
             const size_t batchSize = (tokenSz < Constants::Engine::kFastBatchSize)
                                    ? tokenSz
                                    : Constants::Engine::kFastBatchSize;
