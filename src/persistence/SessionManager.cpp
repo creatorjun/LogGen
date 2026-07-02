@@ -35,7 +35,7 @@ bool SessionManager::loadSession(std::vector<DeviceProfile>& profiles) {
             p.enabled      = item.value("enabled",      true);
             p.eqpIp        = item.value("eqpIp",        std::string("127.0.0.1"));
             p.templateFile = item.value("templateFile", std::string(""));
-            p.format       = logFormatFromString(item.value("format", std::string("PLAIN")));
+            p.format       = LogFormatUtils::fromString(item.value("format", std::string("PLAIN")));
             p.formatRaw    = item.value("formatRaw",    std::string(""));
             p.xmlRaw       = item.value("xmlRaw",       std::string(""));
 
@@ -119,7 +119,7 @@ bool SessionManager::saveSession(const std::vector<DeviceProfile>& profiles) {
                 {"enabled",      p.enabled},
                 {"eqpIp",        p.eqpIp},
                 {"templateFile", p.templateFile},
-                {"format",       logFormatToString(p.format)},
+                {"format",       LogFormatUtils::toString(p.format)},
                 {"formatRaw",    p.formatRaw},
                 {"xmlRaw",       p.xmlRaw},
                 {"collector", {

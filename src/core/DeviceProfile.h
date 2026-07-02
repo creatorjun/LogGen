@@ -1,7 +1,6 @@
 // src/core/DeviceProfile.h
 #pragma once
 
-#include <string>
 #include <string_view>
 #include <vector>
 #include <cstdint>
@@ -14,24 +13,10 @@ enum class LogFormat {
     PLAIN
 };
 
-[[nodiscard]] inline std::string logFormatToString(LogFormat f) {
-    switch (f) {
-        case LogFormat::CSV:   return "CSV";
-        case LogFormat::KVP:   return "KVP";
-        case LogFormat::CEF:   return "CEF";
-        case LogFormat::LEF:   return "LEF";
-        case LogFormat::PLAIN: return "PLAIN";
-        default:               return "PLAIN";
-    }
-}
-
-[[nodiscard]] inline LogFormat logFormatFromString(std::string_view s) {
-    if (s == "CSV")  return LogFormat::CSV;
-    if (s == "KVP")  return LogFormat::KVP;
-    if (s == "CEF")  return LogFormat::CEF;
-    if (s == "LEF")  return LogFormat::LEF;
-    return LogFormat::PLAIN;
-}
+namespace LogFormatUtils {
+    [[nodiscard]] std::string_view toString(LogFormat f) noexcept;
+    [[nodiscard]] LogFormat        fromString(std::string_view s) noexcept;
+} // namespace LogFormatUtils
 
 enum class RateMode {
     EPS,
@@ -45,10 +30,10 @@ struct CollectorTarget {
 };
 
 struct SchedulerConfig {
-    RateMode rateMode        = RateMode::EPS;
-    float    normalRate      = 1.0f;
-    bool     burstEnable     = false;
-    float    burstRate       = 10.0f;
+    RateMode rateMode         = RateMode::EPS;
+    float    normalRate       = 1.0f;
+    bool     burstEnable      = false;
+    float    burstRate        = 10.0f;
     float    burstDurationSec = 5.0f;
     float    burstIntervalSec = 30.0f;
 
