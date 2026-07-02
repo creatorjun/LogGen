@@ -1,5 +1,6 @@
 // src/persistence/SessionManager.cpp
 #include "persistence/SessionManager.h"
+#include "core/LogFormatUtils.h"
 #include <fstream>
 #include <filesystem>
 #include <nlohmann/json.hpp>

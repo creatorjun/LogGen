@@ -1,22 +1,10 @@
 // src/core/DeviceProfile.h
 #pragma once
 
-#include <string_view>
+#include "core/LogFormat.h"
+#include <string>
 #include <vector>
 #include <cstdint>
-
-enum class LogFormat {
-    CSV,
-    KVP,
-    CEF,
-    LEF,
-    PLAIN
-};
-
-namespace LogFormatUtils {
-    [[nodiscard]] std::string_view toString(LogFormat f) noexcept;
-    [[nodiscard]] LogFormat        fromString(std::string_view s) noexcept;
-} // namespace LogFormatUtils
 
 enum class RateMode {
     EPS,

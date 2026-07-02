@@ -1,5 +1,5 @@
 // src/core/LogFormatUtils.cpp
-#include "core/DeviceProfile.h"
+#include "core/LogFormatUtils.h"
 
 namespace LogFormatUtils {
 
