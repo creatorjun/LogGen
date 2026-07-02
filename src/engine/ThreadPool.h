@@ -2,7 +2,7 @@
 #pragma once
 
 #include <vector>
-#include <queue>
+#include <deque>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -20,10 +20,10 @@ public:
 private:
     static void pinCurrentThread(size_t index);
 
-    std::vector<std::thread>          m_workers;
-    std::queue<std::function<void()>> m_tasks;
-    std::mutex                        m_queueMutex;
-    std::condition_variable           m_cv;
-    std::atomic<bool>                 m_stop{false};
-    bool                              m_enableAffinity{true};
+    std::vector<std::thread>           m_workers;
+    std::deque<std::function<void()>>  m_tasks;
+    std::mutex                         m_queueMutex;
+    std::condition_variable            m_cv;
+    std::atomic<bool>                  m_stop{false};
+    bool                               m_enableAffinity{true};
 };

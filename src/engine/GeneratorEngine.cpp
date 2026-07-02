@@ -330,7 +330,6 @@ void GeneratorEngine::buildBatch(
         }
 
         sendBuf.emplace_back(templateEngine.render(tokens));
-        LOG_DEBUG("ENGINE", std::format("[{}] {}", p.deviceName, sendBuf.back()));
 
         LogEntry entry;
         entry.deviceId    = p.id;
@@ -454,6 +453,7 @@ void GeneratorEngine::stop() {
     if (!m_running.load(std::memory_order_acquire)) return;
     LOG_INFO("ENGINE", "Engine stop requested");
     m_running.store(false, std::memory_order_release);
+    m_running.notify_all();
     m_threadPool.reset();
     m_dispatchQueue.wakeAll();
     if (m_dispatcherThread.joinable())
@@ -559,9 +559,6 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
     ScenarioSelector scenarioSelector;
     scenarioSelector.updateScenarios(p.event.scenarios);
 
-    std::mutex              workerMutex;
-    std::condition_variable workerCv;
-
     auto     lastRateCalcTime        = std::chrono::steady_clock::now();
     uint64_t logsSentInThisInterval  = 0;
     auto     burstStartTime          = std::chrono::steady_clock::now();
@@ -593,18 +590,15 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
     auto   tokenLastTime = std::chrono::steady_clock::now();
 
     while (m_running.load(std::memory_order_relaxed)) {
-        auto refreshRes = refreshProfile(
-            profileId, knownVersion, p,
-            senderBase, udpSender, consecutiveFails,
-            templateEngine, fieldGen, scenarioSelector,
-            tokens, prevBurstEnable, inBurstMode, burstStartTime);
-
-        if (!refreshRes) break;
-
         if (!p.enabled) {
-            std::unique_lock<std::mutex> lk(workerMutex);
-            workerCv.wait_for(lk, Constants::Engine::kWorkerIdleWait,
-                [this] { return !m_running.load(std::memory_order_relaxed); });
+            m_running.wait(true, std::memory_order_relaxed);
+            if (!m_running.load(std::memory_order_relaxed)) break;
+            auto refreshRes = refreshProfile(
+                profileId, knownVersion, p,
+                senderBase, udpSender, consecutiveFails,
+                templateEngine, fieldGen, scenarioSelector,
+                tokens, prevBurstEnable, inBurstMode, burstStartTime);
+            if (!refreshRes) break;
             continue;
         }
 
@@ -635,6 +629,12 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
                 tokenBucket  = static_cast<double>(Constants::Engine::kFastBatchSize);
 
             if (tokenBucket < 1.0) {
+                auto refreshRes = refreshProfile(
+                    profileId, knownVersion, p,
+                    senderBase, udpSender, consecutiveFails,
+                    templateEngine, fieldGen, scenarioSelector,
+                    tokens, prevBurstEnable, inBurstMode, burstStartTime);
+                if (!refreshRes) break;
                 std::this_thread::yield();
                 continue;
             }
@@ -643,6 +643,62 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
             const size_t batchSize = (tokenSz < Constants::Engine::kFastBatchSize)
                                    ? tokenSz
                                    : Constants::Engine::kFastBatchSize;
+
+            auto refreshRes = refreshProfile(
+                profileId, knownVersion, p,
+                senderBase, udpSender, consecutiveFails,
+                templateEngine, fieldGen, scenarioSelector,
+                tokens, prevBurstEnable, inBurstMode, burstStartTime);
+            if (!refreshRes) break;
+
+            buildBatch(p, fieldGen, scenarioSelector, templateEngine,
+                tokens, batchSize, nowMs,
+                sendBuf, dispatchBuf,
+                srcPortBuf, dstPortBuf, pktBuf, byteBuf);
+
+            const uint64_t sentCount = sendAndDispatch(
+                p, senderBase, udpSender, consecutiveFails, lastReconnectAttempt,
+                batchSize, sendBuf, dispatchBuf);
+
+            tokenBucket -= static_cast<double>(sentCount);
+
+            if (sentCount > 0) {
+                if (devCounter) devCounter->fetch_add(sentCount, std::memory_order_relaxed);
+                m_totalSentCount.fetch_add(sentCount, std::memory_order_relaxed);
+            }
+            updateRateStats(sentCount, logsSentInThisInterval, lastRateCalcTime, devRateFixed);
+
+        } else if (effectiveRate >= Constants::Engine::kMidPathThreshold) {
+            const auto   nowMid = std::chrono::steady_clock::now();
+            const double dtSec  = std::chrono::duration_cast<std::chrono::duration<double>>(
+                nowMid - tokenLastTime).count();
+            tokenLastTime = nowMid;
+
+            tokenBucket += effectiveRate * dtSec;
+            if (tokenBucket > static_cast<double>(Constants::Engine::kBatchSize))
+                tokenBucket  = static_cast<double>(Constants::Engine::kBatchSize);
+
+            if (tokenBucket < 1.0) {
+                const double waitSec = (1.0 - tokenBucket) / effectiveRate;
+                const auto   waitDur = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                    std::chrono::duration<double>(waitSec));
+                m_running.wait(true, std::memory_order_relaxed);
+                if (!m_running.load(std::memory_order_relaxed)) break;
+                (void)waitDur;
+                continue;
+            }
+
+            const size_t tokenSz   = static_cast<size_t>(tokenBucket);
+            const size_t batchSize = (tokenSz < Constants::Engine::kBatchSize)
+                                   ? tokenSz
+                                   : Constants::Engine::kBatchSize;
+
+            auto refreshRes = refreshProfile(
+                profileId, knownVersion, p,
+                senderBase, udpSender, consecutiveFails,
+                templateEngine, fieldGen, scenarioSelector,
+                tokens, prevBurstEnable, inBurstMode, burstStartTime);
+            if (!refreshRes) break;
 
             buildBatch(p, fieldGen, scenarioSelector, templateEngine,
                 tokens, batchSize, nowMs,
@@ -670,6 +726,13 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
                     std::chrono::duration<double>(batchIntervalSec));
             const auto nextLoopTime = now + batchDuration;
 
+            auto refreshRes = refreshProfile(
+                profileId, knownVersion, p,
+                senderBase, udpSender, consecutiveFails,
+                templateEngine, fieldGen, scenarioSelector,
+                tokens, prevBurstEnable, inBurstMode, burstStartTime);
+            if (!refreshRes) break;
+
             buildBatch(p, fieldGen, scenarioSelector, templateEngine,
                 tokens, currentBatchSize, nowMs,
                 sendBuf, dispatchBuf,
@@ -685,9 +748,7 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
             }
             updateRateStats(sentCount, logsSentInThisInterval, lastRateCalcTime, devRateFixed);
 
-            std::unique_lock<std::mutex> lk(workerMutex);
-            workerCv.wait_until(lk, nextLoopTime,
-                [this] { return !m_running.load(std::memory_order_relaxed); });
+            std::this_thread::sleep_until(nextLoopTime);
         }
     }
 

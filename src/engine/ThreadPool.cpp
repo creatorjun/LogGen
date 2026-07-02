@@ -43,7 +43,7 @@ ThreadPool::ThreadPool(size_t threads, bool enableAffinity)
                     });
                     if (m_stop.load(std::memory_order_relaxed) && m_tasks.empty()) return;
                     task = std::move(m_tasks.front());
-                    m_tasks.pop();
+                    m_tasks.pop_front();
                 }
                 task();
             }
@@ -55,7 +55,7 @@ void ThreadPool::enqueue(std::function<void()> task) {
     {
         std::unique_lock<std::mutex> lock(m_queueMutex);
         if (m_stop.load(std::memory_order_relaxed)) return;
-        m_tasks.emplace(std::move(task));
+        m_tasks.emplace_back(std::move(task));
     }
     m_cv.notify_one();
 }

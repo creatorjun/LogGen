@@ -53,41 +53,57 @@ public:
     }
 
     size_t tryPushBatch(const std::vector<LogEntry>& entries, size_t count) {
-        size_t pushed = 0;
-        for (size_t i = 0; i < count; ++i) {
-            if (!tryPush(entries[i])) break;
-            ++pushed;
+        if (count == 0) return 0;
+        const size_t n = count < entries.size() ? count : entries.size();
+
+        size_t base = m_enqueuePos.load(std::memory_order_relaxed);
+        for (;;) {
+            const size_t tail = base + n;
+            const size_t lastSeq = m_buf[(tail - 1) & m_mask].seq.load(std::memory_order_acquire);
+            const intptr_t diff  = static_cast<intptr_t>(lastSeq)
+                                 - static_cast<intptr_t>(tail - 1);
+            if (diff < 0) {
+                size_t free = m_capacity -
+                    (m_enqueuePos.load(std::memory_order_relaxed) -
+                     m_dequeuePos.load(std::memory_order_relaxed));
+                if (free == 0) return 0;
+                return tryPushBatch(entries, free < n ? free : n);
+            }
+            if (m_enqueuePos.compare_exchange_weak(base, base + n,
+                    std::memory_order_relaxed))
+                break;
         }
-        return pushed;
+
+        for (size_t i = 0; i < n; ++i) {
+            const size_t pos  = base + i;
+            Cell*        cell = &m_buf[pos & m_mask];
+            size_t       seq;
+            do { seq = cell->seq.load(std::memory_order_acquire); }
+            while (static_cast<intptr_t>(seq) - static_cast<intptr_t>(pos) != 0);
+            cell->data = entries[i];
+            cell->seq.store(pos + 1, std::memory_order_release);
+        }
+        return n;
     }
 
     // SINGLE_CONSUMER CONTRACT: drain() must be called from exactly one
-    // thread at a time. m_dequeuePos is never contended during this call,
-    // so the batch loop uses fetch_add instead of CAS to advance the
-    // position — fetch_add has no failure path and no branch on LL/SC
-    // architectures (ARM, RISC-V). Do NOT introduce CAS or multi-consumer
-    // patterns here without revisiting the entire dequeue logic.
+    // thread at a time. m_dequeuePos is never contended during this call.
     size_t drain(std::vector<LogEntry>& out, const std::atomic<bool>& running) {
         out.clear();
 
         size_t pos  = m_dequeuePos.load(std::memory_order_relaxed);
         int    spin = 0;
 
-        // 단건 dequeue: spin/yield/sleep 루프 내에서 spurious failure는
-        // 재진입으로 처리되므로 compare_exchange_weak 유지
         for (;;) {
             Cell*    cell = &m_buf[pos & m_mask];
             size_t   seq  = cell->seq.load(std::memory_order_acquire);
             intptr_t diff = static_cast<intptr_t>(seq) - static_cast<intptr_t>(pos + 1);
 
             if (diff == 0) {
-                if (m_dequeuePos.compare_exchange_weak(pos, pos + 1,
-                        std::memory_order_relaxed)) {
-                    out.push_back(std::move(cell->data));
-                    cell->seq.store(pos + m_capacity, std::memory_order_release);
-                    break;
-                }
-                continue;
+                m_dequeuePos.fetch_add(1, std::memory_order_relaxed);
+                out.push_back(std::move(cell->data));
+                cell->seq.store(pos + m_capacity, std::memory_order_release);
+                break;
             }
 
             if (!running.load(std::memory_order_relaxed) && empty())
@@ -113,10 +129,6 @@ public:
             spin = 0;
         }
 
-        // 배치 수집 루프: 단일 소비자 보장 하에 CAS 불필요.
-        // seq 가드(diff != 0)가 미기록 슬롯 접근을 막으므로 정확성 유지.
-        // fetch_add는 조건 분기 없는 원자 증가 — LL/SC 아키텍처에서
-        // CAS strong 내부 재시도 루프가 완전히 제거됨.
         size_t cur = pos + 1;
         for (;;) {
             Cell*    cell = &m_buf[cur & m_mask];

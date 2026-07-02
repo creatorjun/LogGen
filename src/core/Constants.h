@@ -19,8 +19,9 @@ namespace Constants {
         inline constexpr int    kDefaultThreadPoolSize  = 8;
         inline constexpr size_t kDefaultQueueCapacity   = 131072;
         inline constexpr size_t kBatchSize              = 256;
-        inline constexpr size_t kFastBatchSize          = 4096;   // fast-path 배치 크기
-        inline constexpr double kFastPathThreshold      = 50000.0; // EPS 이상이면 fast-path
+        inline constexpr size_t kFastBatchSize          = 4096;
+        inline constexpr double kFastPathThreshold      = 1000.0;
+        inline constexpr double kMidPathThreshold       = 100.0;
         inline constexpr int    kMaxConsecutiveFails    = 5;
         inline constexpr auto   kReconnectInterval      = std::chrono::seconds(3);
         inline constexpr auto   kWorkerIdleWait         = std::chrono::milliseconds(100);
