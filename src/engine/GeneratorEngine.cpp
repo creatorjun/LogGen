@@ -1,4 +1,16 @@
 // src/engine/GeneratorEngine.cpp
+
+// NOMINMAX must be defined before ANY Windows header (including transitive ones)
+// to prevent min/max macro pollution that breaks std::accumulate / std::max.
+#ifdef _WIN32
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif
+#  ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#  endif
+#endif
+
 #include "GeneratorEngine.h"
 #include "ThreadPool.h"
 #include "UDPSender.h"
@@ -17,9 +29,9 @@
 #include <ranges>
 #include <algorithm>
 #include <numeric>
+#include <cmath>
 
 #ifdef _WIN32
-#define NOMINMAX
 #include <windows.h>
 #include <timeapi.h>
 #pragma comment(lib, "winmm.lib")
@@ -468,8 +480,9 @@ bool GeneratorEngine::runTokenBatchPath(
     tokenLastTime = nowToken;
 
     tokenBucket += effectiveRate * dtSec;
-    if (tokenBucket > static_cast<double>(maxBatch) * 2.0)
-        tokenBucket  = static_cast<double>(maxBatch) * 2.0;
+    const double bucketCap = static_cast<double>(maxBatch) * 2.0;
+    if (tokenBucket > bucketCap)
+        tokenBucket = bucketCap;
 
     if (tokenBucket < 1.0) {
         if (isFastPath) {
@@ -490,7 +503,7 @@ bool GeneratorEngine::runTokenBatchPath(
     }
 
     const size_t tokenSz   = static_cast<size_t>(tokenBucket);
-    const size_t batchSize = tokenSz < maxBatch ? tokenSz : maxBatch;
+    const size_t batchSize = (tokenSz < maxBatch) ? tokenSz : maxBatch;
 
     auto refreshRes = refreshProfile(
         profileId, knownVersion, p,
@@ -519,7 +532,6 @@ bool GeneratorEngine::runTokenBatchPath(
 }
 
 void GeneratorEngine::spawnWorkers(const std::string& profileId, int count) {
-    // Must be called with m_statsMutex already held (unique_lock) and m_threadPool valid
     m_profileWorkerCount[profileId] = count;
     for (int i = 0; i < count; ++i) {
         m_activeWorkers.insert(workerKey(profileId, i));
@@ -540,19 +552,23 @@ void GeneratorEngine::start(const std::vector<DeviceProfile>& profiles) {
 
     const int activeCount = static_cast<int>(enabled.size());
 
-    // Compute per-device worker allocation to fill the thread pool
-    // Extra slots distributed proportionally to configured EPS (round-robin fallback)
+    // Compute per-device worker allocation to fill the thread pool.
+    // Extra slots distributed proportionally to configured EPS.
     std::vector<int> workerCounts(activeCount, 1);
-    int remaining = m_poolSize - activeCount;
+    const int remaining = m_poolSize - activeCount;
     if (remaining > 0 && activeCount > 0) {
-        // Gather EPS weights
+        // Gather EPS weights (floor at 1.0 to avoid zero-weight devices)
         std::vector<double> eps(activeCount);
-        for (int i = 0; i < activeCount; ++i)
-            eps[i] = std::max(1.0, static_cast<double>(
-                enabled[i].get().scheduler.normalRateToEps()));
-        const double totalEps = std::accumulate(eps.begin(), eps.end(), 0.0);
+        for (int i = 0; i < activeCount; ++i) {
+            const double v = static_cast<double>(
+                enabled[i].get().scheduler.normalRateToEps());
+            eps[i] = (v > 1.0) ? v : 1.0;
+        }
 
-        // Proportional allocation
+        double totalEps = 0.0;
+        for (int i = 0; i < activeCount; ++i) totalEps += eps[i];
+
+        // Proportional share of extra slots
         std::vector<double> share(activeCount);
         for (int i = 0; i < activeCount; ++i)
             share[i] = (eps[i] / totalEps) * static_cast<double>(remaining);
@@ -562,15 +578,18 @@ void GeneratorEngine::start(const std::vector<DeviceProfile>& profiles) {
             workerCounts[i] += static_cast<int>(share[i]);
 
         // Distribute leftover by largest remainder
-        int allocated = std::accumulate(workerCounts.begin(), workerCounts.end(), 0) - activeCount;
-        int leftover  = remaining - allocated;
+        int allocated = 0;
+        for (int i = 0; i < activeCount; ++i) allocated += workerCounts[i];
+        int leftover = (m_poolSize - allocated);
         if (leftover > 0) {
             std::vector<std::pair<double, int>> rem;
             rem.reserve(activeCount);
             for (int i = 0; i < activeCount; ++i)
                 rem.emplace_back(share[i] - std::floor(share[i]), i);
-            std::sort(rem.begin(), rem.end(), [](const auto& a, const auto& b){
-                return a.first > b.first; });
+            std::sort(rem.begin(), rem.end(),
+                [](const std::pair<double,int>& a, const std::pair<double,int>& b){
+                    return a.first > b.first;
+                });
             for (int k = 0; k < leftover && k < activeCount; ++k)
                 ++workerCounts[rem[k].second];
         }
@@ -604,8 +623,8 @@ void GeneratorEngine::start(const std::vector<DeviceProfile>& profiles) {
     {
         std::unique_lock lock(m_statsMutex);
         for (int i = 0; i < activeCount; ++i) {
-            const std::string& id = enabled[i].get().id;
-            const int cnt = workerCounts[i];
+            const std::string& id  = enabled[i].get().id;
+            const int          cnt = workerCounts[i];
             LOG_INFO("ENGINE", std::format(
                 "Worker started for profileId={}, device={} (workers={})",
                 id, enabled[i].get().deviceName, cnt));
@@ -650,7 +669,6 @@ void GeneratorEngine::updateProfile(const DeviceProfile& profile) {
     if (spawnWorker && m_threadPool && m_running.load(std::memory_order_acquire)) {
         LOG_INFO("ENGINE", std::format("Spawning new worker for device: id={}, name={}",
             profile.id, profile.deviceName));
-        // updateProfile spawns a single base worker (index 0 of 1)
         m_threadPool->enqueue([this, id = profile.id]() { workerLoop(id, 0, 1); });
     }
 }
@@ -759,7 +777,7 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
     double tokenBucket   = 0.0;
     auto   tokenLastTime = std::chrono::steady_clock::now();
 
-    // Each worker is responsible for (1/totalWorkers) share of the total rate
+    // Each worker handles (1/totalWorkers) of the profile's total rate
     const double workerRateDivisor = static_cast<double>(totalWorkers);
 
     while (m_running.load(std::memory_order_relaxed)) {
@@ -784,7 +802,7 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
             ? (burstEps  <= 0.0 ? 1.0 : burstEps)
             : (normalEps <= 0.0 ? 1.0 : normalEps);
 
-        // Divide rate among all workers for this profile
+        // Divide configured rate evenly across parallel workers for this profile
         const double effectiveRate = totalRate / workerRateDivisor;
 
         const uint64_t nowMs = static_cast<uint64_t>(
