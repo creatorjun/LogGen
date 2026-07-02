@@ -243,12 +243,6 @@ GeneratorEngine::refreshProfile(WorkerContext& ctx) {
     if (!ctx.profile.event.srcIpRandom) ctx.tokens["SRC_IP"] = ctx.profile.event.srcIp;
     if (!ctx.profile.event.dstIpRandom) ctx.tokens["DST_IP"] = ctx.profile.event.dstIpFixed;
 
-    if (!ctx.prevBurstEnable && ctx.profile.scheduler.burstEnable) {
-        ctx.burstStartTime = std::chrono::steady_clock::now();
-        ctx.inBurstMode    = false;
-    }
-    ctx.prevBurstEnable = ctx.profile.scheduler.burstEnable;
-
     if (ctx.profile.event.srcIpRandom)
         ctx.fieldGen.cacheIpRange(ctx.profile.event.srcIpStart, ctx.profile.event.srcIpEnd);
     if (ctx.profile.event.dstIpRandom)
@@ -256,24 +250,6 @@ GeneratorEngine::refreshProfile(WorkerContext& ctx) {
     ctx.scenarioSelector.updateScenarios(ctx.profile.event.scenarios);
 
     return collectorChanged ? RefreshState::kConnectionChanged : RefreshState::kUpdated;
-}
-
-void GeneratorEngine::updateBurstState(
-        WorkerContext& ctx,
-        const std::chrono::steady_clock::time_point& now) {
-    if (!ctx.profile.scheduler.burstEnable) {
-        ctx.inBurstMode = false;
-        return;
-    }
-    const float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now - ctx.burstStartTime).count() / 1000.0f;
-    if (!ctx.inBurstMode && elapsed >= ctx.profile.scheduler.burstIntervalSec) {
-        ctx.inBurstMode    = true;
-        ctx.burstStartTime = now;
-    } else if (ctx.inBurstMode && elapsed >= ctx.profile.scheduler.burstDurationSec) {
-        ctx.inBurstMode    = false;
-        ctx.burstStartTime = now;
-    }
 }
 
 void GeneratorEngine::buildBatch(
@@ -408,37 +384,26 @@ void GeneratorEngine::updateRateStats(WorkerContext& ctx, uint64_t sentCount) {
 
 bool GeneratorEngine::runTokenBatchPath(
         WorkerContext& ctx,
-        double         effectiveRate,
         size_t         maxBatch,
         uint64_t       nowMs,
         bool           isFastPath) {
 
-    const auto   nowToken = std::chrono::steady_clock::now();
-    const double dtSec    = std::chrono::duration_cast<std::chrono::duration<double>>(
-        nowToken - ctx.tokenLastTime).count();
-    ctx.tokenLastTime = nowToken;
+    const size_t batchSize = ctx.rateCtrl.tick(maxBatch);
 
-    ctx.tokenBucket += effectiveRate * dtSec;
-    const double bucketCap = static_cast<double>(maxBatch) * 2.0;
-    if (ctx.tokenBucket > bucketCap)
-        ctx.tokenBucket = bucketCap;
-
-    if (ctx.tokenBucket < 1.0) {
+    if (batchSize == 0) {
         if (isFastPath) {
             auto refreshRes = refreshProfile(ctx);
             if (!refreshRes) return false;
             std::this_thread::yield();
         } else {
-            const double waitSec = (1.0 - ctx.tokenBucket) / effectiveRate;
+            const double rate    = ctx.rateCtrl.effectiveRate();
+            const double waitSec = 1.0 / (rate > 0.0 ? rate : 1.0);
             std::this_thread::sleep_for(
                 std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                     std::chrono::duration<double>(waitSec)));
         }
         return true;
     }
-
-    const size_t tokenSz   = static_cast<size_t>(ctx.tokenBucket);
-    const size_t batchSize = (tokenSz < maxBatch) ? tokenSz : maxBatch;
 
     auto refreshRes = refreshProfile(ctx);
     if (!refreshRes) return false;
@@ -447,7 +412,7 @@ bool GeneratorEngine::runTokenBatchPath(
 
     const uint64_t sentCount = sendAndDispatch(ctx, batchSize);
 
-    ctx.tokenBucket -= static_cast<double>(sentCount);
+    ctx.rateCtrl.consume(sentCount);
 
     if (sentCount > 0) {
         if (ctx.devCounter) ctx.devCounter->fetch_add(sentCount, std::memory_order_relaxed);
@@ -663,9 +628,6 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
     ctx.scenarioSelector.updateScenarios(ctx.profile.event.scenarios);
 
     ctx.lastRateCalcTime = std::chrono::steady_clock::now();
-    ctx.burstStartTime   = std::chrono::steady_clock::now();
-    ctx.tokenLastTime    = std::chrono::steady_clock::now();
-    ctx.prevBurstEnable  = ctx.profile.scheduler.burstEnable;
 
     ctx.tokens["EQP_IP"]          = ctx.profile.eqpIp;
     ctx.tokens["TI_COUNTRY"]      = "UNKNOWN";
@@ -690,16 +652,17 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
             continue;
         }
 
-        const auto now = std::chrono::steady_clock::now();
-        updateBurstState(ctx, now);
-
         const double normalEps = static_cast<double>(ctx.profile.scheduler.normalRateToEps());
         const double burstEps  = static_cast<double>(ctx.profile.scheduler.burstRateToEps());
-        const double totalRate = ctx.inBurstMode
-            ? (burstEps  <= 0.0 ? 1.0 : burstEps)
-            : (normalEps <= 0.0 ? 1.0 : normalEps);
 
-        const double effectiveRate = totalRate / workerRateDivisor;
+        ctx.rateCtrl.update(
+            ctx.profile.scheduler.burstEnable,
+            ctx.profile.scheduler.burstIntervalSec,
+            ctx.profile.scheduler.burstDurationSec,
+            normalEps / workerRateDivisor,
+            burstEps  / workerRateDivisor);
+
+        const double effectiveRate = ctx.rateCtrl.effectiveRate();
 
         const uint64_t nowMs = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -709,19 +672,18 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
         ctx.dispatchBuf.clear();
 
         if (effectiveRate >= Constants::Engine::kFastPathThreshold) {
-            if (!runTokenBatchPath(ctx, effectiveRate,
-                    Constants::Engine::kFastBatchSize, nowMs, true))
+            if (!runTokenBatchPath(ctx, Constants::Engine::kFastBatchSize, nowMs, true))
                 break;
 
         } else if (effectiveRate >= Constants::Engine::kMidPathThreshold) {
-            if (!runTokenBatchPath(ctx, effectiveRate,
-                    Constants::Engine::kBatchSize, nowMs, false))
+            if (!runTokenBatchPath(ctx, Constants::Engine::kBatchSize, nowMs, false))
                 break;
 
         } else {
             const size_t currentBatchSize = (effectiveRate < 60.0) ? 1
                                           : Constants::Engine::kBatchSize;
             const double batchIntervalSec = static_cast<double>(currentBatchSize) / effectiveRate;
+            const auto   now              = std::chrono::steady_clock::now();
             const auto   nextLoopTime     = now + std::chrono::duration_cast<
                 std::chrono::steady_clock::duration>(
                     std::chrono::duration<double>(batchIntervalSec));

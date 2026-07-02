@@ -59,9 +59,6 @@ private:
     [[nodiscard]] RefreshResult
         refreshProfile(WorkerContext& ctx);
 
-    void updateBurstState(WorkerContext& ctx,
-                          const std::chrono::steady_clock::time_point& now);
-
     void buildBatch(WorkerContext& ctx,
                     size_t        batchSize,
                     uint64_t      nowMs);
@@ -72,7 +69,6 @@ private:
     void updateRateStats(WorkerContext& ctx, uint64_t sentCount);
 
     bool runTokenBatchPath(WorkerContext& ctx,
-                           double         effectiveRate,
                            size_t         maxBatch,
                            uint64_t       nowMs,
                            bool           isFastPath);

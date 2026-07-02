@@ -11,6 +11,7 @@
 #include "engine/FieldGenerator.h"
 #include "engine/LogTemplateEngine.h"
 #include "engine/ScenarioSelector.h"
+#include "engine/RateController.h"
 #include "core/DeviceProfile.h"
 #include "core/LogEntry.h"
 
@@ -28,22 +29,18 @@ struct WorkerContext {
     LogTemplateEngine        templateEngine;
     FieldGenerator           fieldGen;
     ScenarioSelector         scenarioSelector;
+    RateController           rateCtrl;
 
     std::flat_map<std::string, std::string> tokens;
 
     std::atomic<uint64_t>*   devCounter{};
     std::atomic<uint32_t>*   devRateFixed{};
 
-    double                   tokenBucket{};
-    std::chrono::steady_clock::time_point tokenLastTime{};
     std::chrono::steady_clock::time_point lastRateCalcTime{};
     std::chrono::steady_clock::time_point lastReconnectAttempt{};
-    std::chrono::steady_clock::time_point burstStartTime{};
 
     uint64_t logsSentInThisInterval{};
     int      consecutiveFails{};
-    bool     inBurstMode{};
-    bool     prevBurstEnable{};
 
     char srcPortBuf[8]{};
     char dstPortBuf[8]{};
