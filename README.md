@@ -217,7 +217,7 @@ git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
 기존 빌드 캐시를 완전히 삭제하고 처음부터 다시 빌드합니다.
 
 ```cmd
-rd /s /q build && cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" && cmake --build build --config Release && .\build\Release\SIMLogGenerator.exe
+git pull && rd /s /q build && cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" && cmake --build build --config Release && .\build\Release\SIMLogGenerator.exe
 ```
 
 > vcpkg 경로가 다른 경우 `C:/vcpkg` 부분을 실제 경로로 변경합니다.
