@@ -50,11 +50,16 @@ private:
     };
     using RefreshResult = std::expected<RefreshState, std::string>;
 
-    void workerLoop(const std::string& profileId);
+    // workerIndex: 0-based index among workers sharing this profile
+    // totalWorkers: total number of workers for this profile
+    void workerLoop(const std::string& profileId, int workerIndex, int totalWorkers);
     void dispatcherLoop();
     void pushWorkerError(std::string_view deviceId,
                          std::string_view deviceName,
                          std::string_view message);
+
+    // Spawn 'count' workers for a given profile, registering each worker key
+    void spawnWorkers(const std::string& profileId, int count);
 
     [[nodiscard]] std::expected<void, std::string>
         initWorkerSender(const DeviceProfile& p,
@@ -137,6 +142,11 @@ private:
                            std::chrono::steady_clock::time_point& lastRateCalcTime,
                            bool                     isFastPath);
 
+    // Returns workerKey string for activeWorkers tracking: "profileId:workerIndex"
+    static std::string workerKey(const std::string& profileId, int workerIndex) {
+        return profileId + ':' + std::to_string(workerIndex);
+    }
+
     int                               m_poolSize;
     std::unique_ptr<class ThreadPool> m_threadPool;
     std::atomic<bool>                 m_running{false};
@@ -150,8 +160,10 @@ private:
     std::flat_map<std::string, DeviceProfile>                                  m_profileMap;
     std::flat_map<std::string, std::unique_ptr<std::atomic<uint64_t>>>         m_deviceCounters;
     std::flat_map<std::string, std::unique_ptr<std::atomic<uint32_t>>>         m_deviceRatesFixed;
+    // workers-per-profile tracking (protected by m_statsMutex)
+    std::flat_map<std::string, int>                                            m_profileWorkerCount;
     std::atomic<uint64_t>                                                      m_totalSentCount{0};
-    std::flat_set<std::string>                                                 m_activeWorkers;
+    std::flat_set<std::string>                                                 m_activeWorkers; // key = profileId:workerIndex
 
     std::atomic<int> m_dateOffsetDays{0};
     TIPool           m_tiPool;

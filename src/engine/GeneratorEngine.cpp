@@ -16,6 +16,7 @@
 #include <cstring>
 #include <ranges>
 #include <algorithm>
+#include <numeric>
 
 #ifdef _WIN32
 #define NOMINMAX
@@ -467,8 +468,8 @@ bool GeneratorEngine::runTokenBatchPath(
     tokenLastTime = nowToken;
 
     tokenBucket += effectiveRate * dtSec;
-    if (tokenBucket > static_cast<double>(maxBatch))
-        tokenBucket  = static_cast<double>(maxBatch);
+    if (tokenBucket > static_cast<double>(maxBatch) * 2.0)
+        tokenBucket  = static_cast<double>(maxBatch) * 2.0;
 
     if (tokenBucket < 1.0) {
         if (isFastPath) {
@@ -517,14 +518,71 @@ bool GeneratorEngine::runTokenBatchPath(
     return true;
 }
 
+void GeneratorEngine::spawnWorkers(const std::string& profileId, int count) {
+    // Must be called with m_statsMutex already held (unique_lock) and m_threadPool valid
+    m_profileWorkerCount[profileId] = count;
+    for (int i = 0; i < count; ++i) {
+        m_activeWorkers.insert(workerKey(profileId, i));
+        m_threadPool->enqueue([this, id = profileId, idx = i, cnt = count]() {
+            workerLoop(id, idx, cnt);
+        });
+    }
+}
+
 void GeneratorEngine::start(const std::vector<DeviceProfile>& profiles) {
     stop();
     LOG_INFO("ENGINE", std::format("Engine start requested. profiles={}", profiles.size()));
+
+    // Collect enabled profiles
+    std::vector<std::reference_wrapper<const DeviceProfile>> enabled;
+    for (const auto& p : profiles)
+        if (p.enabled) enabled.emplace_back(p);
+
+    const int activeCount = static_cast<int>(enabled.size());
+
+    // Compute per-device worker allocation to fill the thread pool
+    // Extra slots distributed proportionally to configured EPS (round-robin fallback)
+    std::vector<int> workerCounts(activeCount, 1);
+    int remaining = m_poolSize - activeCount;
+    if (remaining > 0 && activeCount > 0) {
+        // Gather EPS weights
+        std::vector<double> eps(activeCount);
+        for (int i = 0; i < activeCount; ++i)
+            eps[i] = std::max(1.0, static_cast<double>(
+                enabled[i].get().scheduler.normalRateToEps()));
+        const double totalEps = std::accumulate(eps.begin(), eps.end(), 0.0);
+
+        // Proportional allocation
+        std::vector<double> share(activeCount);
+        for (int i = 0; i < activeCount; ++i)
+            share[i] = (eps[i] / totalEps) * static_cast<double>(remaining);
+
+        // Floor allocation
+        for (int i = 0; i < activeCount; ++i)
+            workerCounts[i] += static_cast<int>(share[i]);
+
+        // Distribute leftover by largest remainder
+        int allocated = std::accumulate(workerCounts.begin(), workerCounts.end(), 0) - activeCount;
+        int leftover  = remaining - allocated;
+        if (leftover > 0) {
+            std::vector<std::pair<double, int>> rem;
+            rem.reserve(activeCount);
+            for (int i = 0; i < activeCount; ++i)
+                rem.emplace_back(share[i] - std::floor(share[i]), i);
+            std::sort(rem.begin(), rem.end(), [](const auto& a, const auto& b){
+                return a.first > b.first; });
+            for (int k = 0; k < leftover && k < activeCount; ++k)
+                ++workerCounts[rem[k].second];
+        }
+    }
+
     {
         std::unique_lock lock(m_statsMutex);
         m_profileMap.clear();
         m_activeWorkers.clear();
+        m_profileWorkerCount.clear();
         m_totalSentCount.store(0, std::memory_order_relaxed);
+
         for (const auto& p : profiles) {
             m_profileMap[p.id] = p;
             auto cit = m_deviceCounters.find(p.id);
@@ -543,13 +601,16 @@ void GeneratorEngine::start(const std::vector<DeviceProfile>& profiles) {
     m_dispatcherThread = std::thread(&GeneratorEngine::dispatcherLoop, this);
     m_threadPool       = std::make_unique<ThreadPool>(m_poolSize);
 
-    for (const auto& p : profiles | std::views::filter(&DeviceProfile::enabled)) {
-        if (!m_running.load(std::memory_order_acquire)) break;
-        {
-            std::unique_lock lock(m_statsMutex);
-            m_activeWorkers.insert(p.id);
+    {
+        std::unique_lock lock(m_statsMutex);
+        for (int i = 0; i < activeCount; ++i) {
+            const std::string& id = enabled[i].get().id;
+            const int cnt = workerCounts[i];
+            LOG_INFO("ENGINE", std::format(
+                "Worker started for profileId={}, device={} (workers={})",
+                id, enabled[i].get().deviceName, cnt));
+            spawnWorkers(id, cnt);
         }
-        m_threadPool->enqueue([this, id = p.id]() { workerLoop(id); });
     }
     LOG_INFO("ENGINE", std::format("Engine started. threadPoolSize={}", m_poolSize));
 }
@@ -579,8 +640,8 @@ void GeneratorEngine::updateProfile(const DeviceProfile& profile) {
                 profile.id, profile.deviceName));
 
             if (!wasEnabled && profile.enabled &&
-                !m_activeWorkers.contains(profile.id)) {
-                m_activeWorkers.insert(profile.id);
+                !m_activeWorkers.contains(workerKey(profile.id, 0))) {
+                m_activeWorkers.insert(workerKey(profile.id, 0));
                 spawnWorker = true;
             }
         }
@@ -589,7 +650,8 @@ void GeneratorEngine::updateProfile(const DeviceProfile& profile) {
     if (spawnWorker && m_threadPool && m_running.load(std::memory_order_acquire)) {
         LOG_INFO("ENGINE", std::format("Spawning new worker for device: id={}, name={}",
             profile.id, profile.deviceName));
-        m_threadPool->enqueue([this, id = profile.id]() { workerLoop(id); });
+        // updateProfile spawns a single base worker (index 0 of 1)
+        m_threadPool->enqueue([this, id = profile.id]() { workerLoop(id, 0, 1); });
     }
 }
 
@@ -608,10 +670,14 @@ void GeneratorEngine::dispatcherLoop() {
     LOG_INFO("ENGINE", "Dispatcher thread stopped");
 }
 
-void GeneratorEngine::workerLoop(const std::string& profileId) {
+void GeneratorEngine::workerLoop(const std::string& profileId,
+                                  int workerIndex,
+                                  int totalWorkers) {
+    const std::string wKey = workerKey(profileId, workerIndex);
+
     if (!m_running.load(std::memory_order_acquire)) {
         std::unique_lock lock(m_statsMutex);
-        m_activeWorkers.erase(profileId);
+        m_activeWorkers.erase(wKey);
         return;
     }
 
@@ -643,7 +709,7 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
     if (auto res = initWorkerSender(p, senderBase, udpSender); !res) {
         pushWorkerError(p.id, p.deviceName, res.error());
         std::unique_lock lock(m_statsMutex);
-        m_activeWorkers.erase(profileId);
+        m_activeWorkers.erase(wKey);
         return;
     }
 
@@ -652,7 +718,7 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
         pushWorkerError(p.id, p.deviceName,
             std::format("Template load failed (formatRaw empty): {}", p.deviceName));
         std::unique_lock lock(m_statsMutex);
-        m_activeWorkers.erase(profileId);
+        m_activeWorkers.erase(wKey);
         return;
     }
 
@@ -693,6 +759,9 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
     double tokenBucket   = 0.0;
     auto   tokenLastTime = std::chrono::steady_clock::now();
 
+    // Each worker is responsible for (1/totalWorkers) share of the total rate
+    const double workerRateDivisor = static_cast<double>(totalWorkers);
+
     while (m_running.load(std::memory_order_relaxed)) {
         if (!p.enabled) {
             m_running.wait(true, std::memory_order_relaxed);
@@ -711,9 +780,12 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
 
         const double normalEps = static_cast<double>(p.scheduler.normalRateToEps());
         const double burstEps  = static_cast<double>(p.scheduler.burstRateToEps());
-        const double effectiveRate = inBurstMode
+        const double totalRate = inBurstMode
             ? (burstEps  <= 0.0 ? 1.0 : burstEps)
             : (normalEps <= 0.0 ? 1.0 : normalEps);
+
+        // Divide rate among all workers for this profile
+        const double effectiveRate = totalRate / workerRateDivisor;
 
         const uint64_t nowMs = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -788,7 +860,7 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
 
     {
         std::unique_lock lock(m_statsMutex);
-        m_activeWorkers.erase(profileId);
+        m_activeWorkers.erase(wKey);
     }
     LOG_INFO("ENGINE", std::format("Worker stopped for profileId={}, device={}",
         profileId, p.deviceName));
