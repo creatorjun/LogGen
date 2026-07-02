@@ -1,13 +1,11 @@
 // src/engine/WorkerContext.h
 #pragma once
-#include <memory>
 #include <atomic>
 #include <chrono>
 #include <flat_map>
 #include <string>
 #include <vector>
-#include "engine/ISender.h"
-#include "engine/UDPSender.h"
+#include "engine/ConnectionManager.h"
 #include "engine/FieldGenerator.h"
 #include "engine/LogTemplateEngine.h"
 #include "engine/ScenarioSelector.h"
@@ -23,8 +21,7 @@ struct WorkerContext {
     DeviceProfile            profile;
     uint64_t                 knownVersion{};
 
-    std::unique_ptr<ISender> sender;
-    UDPSender*               udpSender{};
+    ConnectionManager        connMgr;
 
     LogTemplateEngine        templateEngine;
     FieldGenerator           fieldGen;
@@ -37,10 +34,8 @@ struct WorkerContext {
     std::atomic<uint32_t>*   devRateFixed{};
 
     std::chrono::steady_clock::time_point lastRateCalcTime{};
-    std::chrono::steady_clock::time_point lastReconnectAttempt{};
 
     uint64_t logsSentInThisInterval{};
-    int      consecutiveFails{};
 
     char srcPortBuf[8]{};
     char dstPortBuf[8]{};

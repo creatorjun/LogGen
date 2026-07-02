@@ -10,6 +10,7 @@
 #endif
 
 #include "GeneratorEngine.h"
+#include "ConnectionManager.h"
 #include "ThreadPool.h"
 #include "UDPSender.h"
 #include "TCPSender.h"
@@ -182,23 +183,6 @@ void GeneratorEngine::pushWorkerError(std::string_view deviceId,
     m_dispatchQueue.tryPush(std::move(err));
 }
 
-std::expected<void, std::string>
-GeneratorEngine::initWorkerSender(WorkerContext& ctx) {
-    const DeviceProfile& p = ctx.profile;
-    ctx.sender = p.collector.useTCP
-        ? std::unique_ptr<ISender>(std::make_unique<TCPSender>())
-        : std::unique_ptr<ISender>(std::make_unique<UDPSender>());
-
-    ctx.udpSender = p.collector.useTCP
-        ? nullptr
-        : static_cast<UDPSender*>(ctx.sender.get());
-
-    if (!ctx.sender->openConnection(p.collector.ip, p.collector.port))
-        return std::unexpected(std::format("Connection failed: {}:{}",
-            p.collector.ip, p.collector.port));
-    return {};
-}
-
 GeneratorEngine::RefreshResult
 GeneratorEngine::refreshProfile(WorkerContext& ctx) {
     const uint64_t curVersion = m_profileVersion.load(std::memory_order_acquire);
@@ -223,12 +207,12 @@ GeneratorEngine::refreshProfile(WorkerContext& ctx) {
     ctx.profile = updated;
 
     if (collectorChanged) {
-        if (auto res = initWorkerSender(ctx); !res) {
+        if (auto res = ctx.connMgr.connect(ctx.profile); !res) {
             pushWorkerError(ctx.profile.id, ctx.profile.deviceName,
                 std::format("Reconnect failed: {}", res.error()));
             return std::unexpected(res.error());
         }
-        ctx.consecutiveFails = 0;
+        ctx.connMgr.resetFails();
         LOG_INFO("NETWORK", std::format("Collector connection updated: device={}, target={}:{}",
             ctx.profile.deviceName, ctx.profile.collector.ip, ctx.profile.collector.port));
     }
@@ -324,39 +308,25 @@ void GeneratorEngine::buildBatch(
 }
 
 uint64_t GeneratorEngine::sendAndDispatch(WorkerContext& ctx, size_t batchSize) {
-    const DeviceProfile& p = ctx.profile;
+    const DeviceProfile& p  = ctx.profile;
+    ISender*   sender    = ctx.connMgr.sender();
+    UDPSender* udpSender = ctx.connMgr.udpSender();
     uint64_t sentCount = 0;
 
-    if (ctx.udpSender) {
-        sentCount = static_cast<uint64_t>(ctx.udpSender->sendBatchGetCount(ctx.sendBuf));
-        ctx.consecutiveFails = (sentCount > 0) ? 0 : ctx.consecutiveFails + 1;
+    if (udpSender) {
+        sentCount = static_cast<uint64_t>(udpSender->sendBatchGetCount(ctx.sendBuf));
+        if (sentCount > 0) ctx.connMgr.resetFails();
+        else               ctx.connMgr.incFails();
     } else {
-        if (ctx.sender->sendBatch(ctx.sendBuf)) {
-            sentCount            = static_cast<uint64_t>(batchSize);
-            ctx.consecutiveFails = 0;
+        if (sender->sendBatch(ctx.sendBuf)) {
+            sentCount = static_cast<uint64_t>(batchSize);
+            ctx.connMgr.resetFails();
         } else {
-            ++ctx.consecutiveFails;
+            ctx.connMgr.incFails();
             LOG_WARN("NETWORK", std::format("sendBatch failed ({}/{}): device={}, target={}:{}",
-                ctx.consecutiveFails, Constants::Engine::kMaxConsecutiveFails,
+                ctx.connMgr.consecutiveFails(), Constants::Engine::kMaxConsecutiveFails,
                 p.deviceName, p.collector.ip, p.collector.port));
-
-            if (ctx.consecutiveFails >= Constants::Engine::kMaxConsecutiveFails) {
-                const auto elapsed = std::chrono::steady_clock::now() - ctx.lastReconnectAttempt;
-                if (elapsed >= Constants::Engine::kReconnectInterval) {
-                    ctx.lastReconnectAttempt = std::chrono::steady_clock::now();
-                    LOG_WARN("NETWORK", std::format(
-                        "Max consecutive failures reached, forcing reconnect: device={}",
-                        p.deviceName));
-                    if (ctx.sender->openConnection(p.collector.ip, p.collector.port)) {
-                        ctx.consecutiveFails = 0;
-                        LOG_INFO("NETWORK", std::format(
-                            "Forced reconnect succeeded: device={}", p.deviceName));
-                    } else {
-                        LOG_ERROR("NETWORK", std::format(
-                            "Forced reconnect failed: device={}", p.deviceName));
-                    }
-                }
-            }
+            ctx.connMgr.reconnectIfNeeded(p);
         }
     }
 
@@ -604,7 +574,7 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
     LOG_INFO("ENGINE", std::format("Worker started for profileId={}, device={}",
         profileId, ctx.profile.deviceName));
 
-    if (auto res = initWorkerSender(ctx); !res) {
+    if (auto res = ctx.connMgr.connect(ctx.profile); !res) {
         pushWorkerError(ctx.profile.id, ctx.profile.deviceName, res.error());
         std::unique_lock lock(m_statsMutex);
         m_activeWorkers.erase(wKey);

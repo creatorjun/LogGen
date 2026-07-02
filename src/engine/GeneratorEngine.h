@@ -53,9 +53,6 @@ private:
 
     void spawnWorkers(const std::string& profileId, int count);
 
-    [[nodiscard]] std::expected<void, std::string>
-        initWorkerSender(WorkerContext& ctx);
-
     [[nodiscard]] RefreshResult
         refreshProfile(WorkerContext& ctx);
 
