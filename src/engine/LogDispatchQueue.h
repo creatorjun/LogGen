@@ -61,12 +61,20 @@ public:
         return pushed;
     }
 
+    // SINGLE_CONSUMER CONTRACT: drain() must be called from exactly one
+    // thread at a time. m_dequeuePos is never contended during this call,
+    // so the batch loop uses fetch_add instead of CAS to advance the
+    // position — fetch_add has no failure path and no branch on LL/SC
+    // architectures (ARM, RISC-V). Do NOT introduce CAS or multi-consumer
+    // patterns here without revisiting the entire dequeue logic.
     size_t drain(std::vector<LogEntry>& out, const std::atomic<bool>& running) {
         out.clear();
 
         size_t pos  = m_dequeuePos.load(std::memory_order_relaxed);
         int    spin = 0;
 
+        // 단건 dequeue: spin/yield/sleep 루프 내에서 spurious failure는
+        // 재진입으로 처리되므로 compare_exchange_weak 유지
         for (;;) {
             Cell*    cell = &m_buf[pos & m_mask];
             size_t   seq  = cell->seq.load(std::memory_order_acquire);
@@ -105,6 +113,10 @@ public:
             spin = 0;
         }
 
+        // 배치 수집 루프: 단일 소비자 보장 하에 CAS 불필요.
+        // seq 가드(diff != 0)가 미기록 슬롯 접근을 막으므로 정확성 유지.
+        // fetch_add는 조건 분기 없는 원자 증가 — LL/SC 아키텍처에서
+        // CAS strong 내부 재시도 루프가 완전히 제거됨.
         size_t cur = pos + 1;
         for (;;) {
             Cell*    cell = &m_buf[cur & m_mask];
@@ -112,14 +124,10 @@ public:
             intptr_t diff = static_cast<intptr_t>(seq) - static_cast<intptr_t>(cur + 1);
             if (diff != 0) break;
 
-            size_t expected = cur;
-            size_t next     = cur + 1;
-            if (!m_dequeuePos.compare_exchange_strong(expected, next,
-                    std::memory_order_relaxed))
-                break;
+            m_dequeuePos.fetch_add(1, std::memory_order_relaxed);
             out.push_back(std::move(cell->data));
             cell->seq.store(cur + m_capacity, std::memory_order_release);
-            cur = next;
+            cur++;
         }
         return out.size();
     }
