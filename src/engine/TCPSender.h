@@ -1,48 +1,49 @@
 // src/engine/TCPSender.h
 #pragma once
 
-#include "engine/ISender.h"
+#ifdef _WIN32
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif
+#  include <winsock2.h>
+#  include <ws2tcpip.h>
+#  pragma comment(lib, "ws2_32.lib")
+   using TcpSocket = SOCKET;
+   static constexpr TcpSocket kInvalidTcpSocket = INVALID_SOCKET;
+#else
+#  include <sys/socket.h>
+#  include <netinet/in.h>
+#  include <netinet/tcp.h>
+#  include <arpa/inet.h>
+#  include <unistd.h>
+   using TcpSocket = int;
+   static constexpr TcpSocket kInvalidTcpSocket = -1;
+#endif
+
 #include <string>
 #include <vector>
-#include <cstdint>
-#include "core/Constants.h"
-
-#ifdef _WIN32
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #include <winsock2.h>
-    #include <ws2tcpip.h>
-    using tcp_socket_t = SOCKET;
-    static constexpr tcp_socket_t kInvalidTcpSocket = INVALID_SOCKET;
-#else
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include <arpa/inet.h>
-    #include <unistd.h>
-    #include <fcntl.h>
-    using tcp_socket_t = int;
-    static constexpr tcp_socket_t kInvalidTcpSocket = -1;
-#endif
+#include "ISender.h"
 
 class TCPSender : public ISender {
 public:
     TCPSender();
     ~TCPSender() override;
 
-    [[nodiscard]] bool openConnection(const std::string& targetIp, uint16_t port) override;
-    [[nodiscard]] bool sendLog(const std::string& rawLog)                          override;
-    [[nodiscard]] bool sendBatch(const std::vector<std::string>& logs)             override;
-    void               closeConnection()                                           override;
+    bool openConnection(const std::string& targetIp, uint16_t port) override;
+    bool sendLog(const std::string& rawLog)                          override;
+    bool sendBatch(const std::vector<std::string>& logs)             override;
+    void closeConnection()                                           override;
 
 private:
-    [[nodiscard]] bool reconnect();
-    [[nodiscard]] bool sendFrame(const std::string& frame);
+    static constexpr int kConnectTimeoutMs = 3000;
 
-    static constexpr int kConnectTimeoutMs = Constants::Network::kTcpConnectTimeoutMs;
-    static constexpr int kSendTimeoutMs    = Constants::Network::kTcpSendTimeoutMs;
+    bool reconnect();
+    bool sendRaw(const char* data, size_t len);
 
-    tcp_socket_t m_socket    = kInvalidTcpSocket;
-    std::string  m_targetIp;
-    uint16_t     m_port      = 0;
+    TcpSocket   m_socket    = kInvalidTcpSocket;
+    std::string m_targetIp;
+    uint16_t    m_port      = 0;
+
+    // batch coalesce buffer — reused across sendBatch calls
+    std::string m_coalesceBuf;
 };

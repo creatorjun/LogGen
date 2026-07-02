@@ -1,9 +1,13 @@
 // src/engine/TCPSender.cpp
 #include "TCPSender.h"
 #include "logging/Logger.h"
+#include "core/Constants.h"
 #include <cstring>
 
-TCPSender::TCPSender()  = default;
+TCPSender::TCPSender() {
+    m_coalesceBuf.reserve(Constants::Network::kTcpCoalesceReserve);
+}
+
 TCPSender::~TCPSender() { closeConnection(); }
 
 bool TCPSender::openConnection(const std::string& targetIp, uint16_t port) {
@@ -15,11 +19,27 @@ bool TCPSender::openConnection(const std::string& targetIp, uint16_t port) {
         return false;
     }
 
+    // TCP_NODELAY: disable Nagle — we coalesce ourselves
 #ifdef _WIN32
+    BOOL nodelay = TRUE;
+    setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY,
+               reinterpret_cast<const char*>(&nodelay), sizeof(nodelay));
+
+    // send-side SO_SNDBUF
+    int sndbuf = Constants::Network::kUdpSendBufferBytes; // reuse same 64MB constant
+    setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF,
+               reinterpret_cast<const char*>(&sndbuf), sizeof(sndbuf));
+
     DWORD timeout = kConnectTimeoutMs;
     setsockopt(m_socket, SOL_SOCKET, SO_SNDTIMEO,
                reinterpret_cast<const char*>(&timeout), sizeof(timeout));
 #else
+    int nodelay = 1;
+    setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+
+    int sndbuf = Constants::Network::kUdpSendBufferBytes;
+    setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+
     struct timeval tv;
     tv.tv_sec  = kConnectTimeoutMs / 1000;
     tv.tv_usec = (kConnectTimeoutMs % 1000) * 1000;
@@ -55,55 +75,57 @@ bool TCPSender::reconnect() {
     return openConnection(ip, port);
 }
 
-bool TCPSender::sendFrame(const std::string& frame) {
-    if (m_socket == kInvalidTcpSocket) return false;
-
-    size_t totalSent = 0;
-    size_t bytesLeft = frame.size();
-    const char* data = frame.c_str();
-
-    while (totalSent < frame.size()) {
+bool TCPSender::sendRaw(const char* data, size_t len) {
+    size_t sent = 0;
+    while (sent < len) {
 #ifdef _WIN32
-        int n = send(m_socket, data + totalSent, static_cast<int>(bytesLeft), 0);
-        if (n == SOCKET_ERROR) {
-            return false;
-        }
+        int n = send(m_socket, data + sent, static_cast<int>(len - sent), 0);
+        if (n == SOCKET_ERROR) return false;
 #else
-        ssize_t n = send(m_socket, data + totalSent, bytesLeft, MSG_NOSIGNAL);
+        ssize_t n = send(m_socket, data + sent, len - sent, MSG_NOSIGNAL);
         if (n < 0) {
             if (errno == EINTR) continue;
             return false;
         }
 #endif
-        if (n == 0) {
-            return false;
-        }
-
-        totalSent += static_cast<size_t>(n);
-        bytesLeft -= static_cast<size_t>(n);
+        if (n == 0) return false;
+        sent += static_cast<size_t>(n);
     }
-
     return true;
 }
 
 bool TCPSender::sendLog(const std::string& rawLog) {
     if (m_socket == kInvalidTcpSocket) return false;
 
-    const std::string frame = rawLog + "\n";
+    // fast path: single send with inline newline via scatter-gather
+    m_coalesceBuf.assign(rawLog);
+    m_coalesceBuf += '\n';
 
-    if (sendFrame(frame)) return true;
+    if (sendRaw(m_coalesceBuf.data(), m_coalesceBuf.size())) return true;
 
-    LOG_WARN("NETWORK", "TCP send failed, attempting reconnect: " + m_targetIp + ":" + std::to_string(m_port));
+    LOG_WARN("NETWORK", "TCP send failed, attempting reconnect: " +
+             m_targetIp + ":" + std::to_string(m_port));
     if (!reconnect()) return false;
-
-    return sendFrame(frame);
+    return sendRaw(m_coalesceBuf.data(), m_coalesceBuf.size());
 }
 
 bool TCPSender::sendBatch(const std::vector<std::string>& logs) {
+    if (m_socket == kInvalidTcpSocket || logs.empty()) return false;
+
+    // Coalesce all logs into one buffer: "log1\nlog2\n..."
+    // This turns N syscalls into 1, dramatically reducing overhead.
+    m_coalesceBuf.clear();
     for (const auto& log : logs) {
-        if (!sendLog(log)) return false;
+        m_coalesceBuf += log;
+        m_coalesceBuf += '\n';
     }
-    return true;
+
+    if (sendRaw(m_coalesceBuf.data(), m_coalesceBuf.size())) return true;
+
+    LOG_WARN("NETWORK", "TCP batch send failed, attempting reconnect: " +
+             m_targetIp + ":" + std::to_string(m_port));
+    if (!reconnect()) return false;
+    return sendRaw(m_coalesceBuf.data(), m_coalesceBuf.size());
 }
 
 void TCPSender::closeConnection() {

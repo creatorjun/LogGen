@@ -38,7 +38,8 @@ bool UDPSender::openConnection(const std::string& targetIp, uint16_t port) {
 #ifdef _WIN32
     setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF,
                reinterpret_cast<const char*>(&sndbuf), sizeof(sndbuf));
-    u_long nonBlocking = 0;
+    // Non-blocking for Windows hot path
+    u_long nonBlocking = 1;
     ioctlsocket(m_socket, FIONBIO, &nonBlocking);
 #else
     setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
@@ -54,6 +55,14 @@ bool UDPSender::openConnection(const std::string& targetIp, uint16_t port) {
         return false;
     }
 
+    // connect() so subsequent sendto -> send, avoids repeated addr copy in kernel
+    if (connect(m_socket,
+                reinterpret_cast<const sockaddr*>(&m_addr),
+                sizeof(m_addr)) != 0) {
+        // non-fatal for UDP; log and continue
+        LOG_WARN("NETWORK", "UDP connect() failed (non-fatal): " + targetIp + ":" + std::to_string(port));
+    }
+
     m_targetIp = targetIp;
     m_port     = port;
     LOG_INFO("NETWORK", "UDP connection opened: " + targetIp + ":" + std::to_string(port));
@@ -62,23 +71,13 @@ bool UDPSender::openConnection(const std::string& targetIp, uint16_t port) {
 
 bool UDPSender::sendLog(const std::string& rawLog) {
     if (m_socket == kInvalidUdpSocket) return false;
-
 #ifdef _WIN32
-    int n = sendto(m_socket, rawLog.c_str(), static_cast<int>(rawLog.size()), 0,
-                   reinterpret_cast<const sockaddr*>(&m_addr), sizeof(m_addr));
-    if (n == SOCKET_ERROR) {
-        LOG_WARN("NETWORK", "UDP sendto failed: " + m_targetIp + ":" + std::to_string(m_port));
-        return false;
-    }
+    int n = send(m_socket, rawLog.c_str(), static_cast<int>(rawLog.size()), 0);
+    return n != SOCKET_ERROR;
 #else
-    ssize_t n = sendto(m_socket, rawLog.c_str(), rawLog.size(), MSG_NOSIGNAL,
-                       reinterpret_cast<const sockaddr*>(&m_addr), sizeof(m_addr));
-    if (n < 0) {
-        LOG_WARN("NETWORK", "UDP sendto failed: " + m_targetIp + ":" + std::to_string(m_port));
-        return false;
-    }
+    ssize_t n = send(m_socket, rawLog.c_str(), rawLog.size(), MSG_NOSIGNAL);
+    return n >= 0;
 #endif
-    return true;
 }
 
 size_t UDPSender::sendBatchGetCount(const std::vector<std::string>& logs) {
@@ -87,51 +86,49 @@ size_t UDPSender::sendBatchGetCount(const std::vector<std::string>& logs) {
     size_t successCount = 0;
 
 #ifdef _WIN32
+    // Windows: build WSABUF array and call WSASend (connected socket -> no addr needed)
     size_t offset = 0;
     while (offset < logs.size()) {
-        const size_t chunk = (std::min)(logs.size() - offset, Constants::Network::kUdpBatchCapacity);
+        const size_t chunk = std::min(logs.size() - offset,
+                                      Constants::Network::kUdpBatchCapacity);
         for (size_t i = 0; i < chunk; ++i) {
             m_wsaBufs[i].buf = const_cast<char*>(logs[offset + i].c_str());
             m_wsaBufs[i].len = static_cast<ULONG>(logs[offset + i].size());
         }
+        // Send each packet individually but with pre-built WSABUF (avoids kernel addr copy)
         for (size_t i = 0; i < chunk; ++i) {
             DWORD bytesSent = 0;
-            int ret = WSASendTo(
+            int ret = WSASend(
                 m_socket,
                 &m_wsaBufs[i], 1,
                 &bytesSent,
                 0,
-                reinterpret_cast<const sockaddr*>(&m_addr),
-                sizeof(m_addr),
                 nullptr, nullptr);
-            if (ret == 0) {
+            if (ret == 0 || WSAGetLastError() == WSAEWOULDBLOCK) {
                 ++successCount;
-            } else {
-                LOG_WARN("NETWORK", "UDP WSASendTo failed: " + m_targetIp + ":" + std::to_string(m_port));
             }
         }
         offset += chunk;
     }
 #else
+    // Linux: sendmmsg sends multiple datagrams in one syscall
     size_t offset = 0;
     while (offset < logs.size()) {
-        const size_t chunk = (std::min)(logs.size() - offset, Constants::Network::kUdpBatchCapacity);
+        const size_t chunk = std::min(logs.size() - offset,
+                                      Constants::Network::kUdpBatchCapacity);
         for (size_t i = 0; i < chunk; ++i) {
             m_iovecs[i].iov_base = const_cast<char*>(logs[offset + i].c_str());
             m_iovecs[i].iov_len  = logs[offset + i].size();
 
             memset(&m_mmsgHdrs[i], 0, sizeof(m_mmsgHdrs[i]));
-            m_mmsgHdrs[i].msg_hdr.msg_name    = &m_addr;
-            m_mmsgHdrs[i].msg_hdr.msg_namelen = sizeof(m_addr);
-            m_mmsgHdrs[i].msg_hdr.msg_iov     = &m_iovecs[i];
-            m_mmsgHdrs[i].msg_hdr.msg_iovlen  = 1;
+            m_mmsgHdrs[i].msg_hdr.msg_iov    = &m_iovecs[i];
+            m_mmsgHdrs[i].msg_hdr.msg_iovlen = 1;
+            // msg_name not needed: socket is connected
         }
-        int sent = sendmmsg(m_socket, m_mmsgHdrs, static_cast<unsigned int>(chunk), 0);
-        if (sent > 0) {
+        int sent = sendmmsg(m_socket, m_mmsgHdrs,
+                            static_cast<unsigned int>(chunk), MSG_DONTWAIT);
+        if (sent > 0)
             successCount += static_cast<size_t>(sent);
-        } else if (sent < 0) {
-            LOG_WARN("NETWORK", "UDP sendmmsg failed: " + m_targetIp + ":" + std::to_string(m_port));
-        }
         offset += chunk;
     }
 #endif
