@@ -41,7 +41,7 @@ GeneratorEngine::GeneratorEngine(int threadPoolSize, size_t queueCapacity)
     , m_dispatchQueue(queueCapacity)
 {
 #ifdef _WIN32
-    timeBeginPeriod(1);  // Windows 타이머 해상도 1ms로 향상
+    timeBeginPeriod(1);
 #endif
 }
 
@@ -251,16 +251,15 @@ void GeneratorEngine::buildBatch(
             }
         }
 
-        std::string rendered = templateEngine.render(tokens);
-        LOG_DEBUG("ENGINE", std::format("[{}] {}", p.deviceName, rendered));
+        sendBuf.emplace_back(templateEngine.render(tokens));
+        LOG_DEBUG("ENGINE", std::format("[{}] {}", p.deviceName, sendBuf.back()));
 
         LogEntry entry;
         entry.deviceId    = p.id;
         entry.deviceName  = p.deviceName;
-        entry.rawLog      = rendered;
+        entry.rawLog      = sendBuf.back();
         entry.timestampMs = nowMs;
         dispatchBuf.push_back(std::move(entry));
-        sendBuf.push_back(std::move(rendered));
     }
 }
 
@@ -482,7 +481,6 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
     ScenarioSelector scenarioSelector;
     scenarioSelector.updateScenarios(p.event.scenarios);
 
-    // 워커별 로컬 슬립 제어 (공유 mutex 제거)
     std::mutex              workerMutex;
     std::condition_variable workerCv;
 
@@ -513,7 +511,6 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
     int  consecutiveFails     = 0;
     auto lastReconnectAttempt = std::chrono::steady_clock::time_point{};
 
-    // 토큰 버킷: fast-path 속도 제어용
     double tokenBucket   = 0.0;
     auto   tokenLastTime = std::chrono::steady_clock::now();
 
@@ -550,7 +547,6 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
         dispatchBuf.clear();
 
         if (effectiveRate >= Constants::Engine::kFastPathThreshold) {
-            // ── fast-path: wait_until 없이 연속 전송, 토큰 버킷으로 속도 제어 ──
             const auto   nowFast = std::chrono::steady_clock::now();
             const double dtSec   = std::chrono::duration_cast<std::chrono::duration<double>>(
                 nowFast - tokenLastTime).count();
@@ -565,7 +561,6 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
                 continue;
             }
 
-            // std::min 대신 삼항 연산자 사용 (NOMINMAX 보호 이중화)
             const size_t tokenSz  = static_cast<size_t>(tokenBucket);
             const size_t batchSize = (tokenSz < Constants::Engine::kFastBatchSize)
                                    ? tokenSz
@@ -589,7 +584,6 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
             updateRateStats(sentCount, logsSentInThisInterval, lastRateCalcTime, devRateFixed);
 
         } else {
-            // ── normal-path: wait_until 기반 정밀 인터벌 제어 ──
             const size_t currentBatchSize = (effectiveRate < 60.0) ? 1
                                           : Constants::Engine::kBatchSize;
             const double batchIntervalSec = static_cast<double>(currentBatchSize) / effectiveRate;
