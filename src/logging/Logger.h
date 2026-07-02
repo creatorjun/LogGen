@@ -2,6 +2,7 @@
 #pragma once
 
 #include <string_view>
+#include <source_location>
 #include <deque>
 #include <mutex>
 #include <condition_variable>
@@ -25,7 +26,10 @@ public:
     void initialize(std::string_view logDir = "logs",
                     LogLevel minLevel = LogLevel::Info);
     void shutdown();
-    void log(LogLevel level, std::string_view domain, std::string_view message);
+    void log(LogLevel level,
+             std::string_view domain,
+             std::string_view message,
+             std::source_location loc = std::source_location::current());
 
     Logger(const Logger&)            = delete;
     Logger& operator=(const Logger&) = delete;
@@ -52,7 +56,38 @@ private:
 
 } // namespace logging
 
-#define LOG_DEBUG(domain, message) ::logging::Logger::instance().log(::logging::LogLevel::Debug, domain, message)
-#define LOG_INFO(domain, message)  ::logging::Logger::instance().log(::logging::LogLevel::Info,  domain, message)
-#define LOG_WARN(domain, message)  ::logging::Logger::instance().log(::logging::LogLevel::Warn,  domain, message)
-#define LOG_ERROR(domain, message) ::logging::Logger::instance().log(::logging::LogLevel::Error, domain, message)
+namespace log_detail {
+
+inline void emit(::logging::LogLevel level,
+                 std::string_view domain,
+                 std::string_view message,
+                 std::source_location loc)
+{
+    ::logging::Logger::instance().log(level, domain, message, loc);
+}
+
+} // namespace log_detail
+
+inline void LOG_DEBUG(std::string_view domain, std::string_view message,
+    std::source_location loc = std::source_location::current())
+{
+    log_detail::emit(::logging::LogLevel::Debug, domain, message, loc);
+}
+
+inline void LOG_INFO(std::string_view domain, std::string_view message,
+    std::source_location loc = std::source_location::current())
+{
+    log_detail::emit(::logging::LogLevel::Info, domain, message, loc);
+}
+
+inline void LOG_WARN(std::string_view domain, std::string_view message,
+    std::source_location loc = std::source_location::current())
+{
+    log_detail::emit(::logging::LogLevel::Warn, domain, message, loc);
+}
+
+inline void LOG_ERROR(std::string_view domain, std::string_view message,
+    std::source_location loc = std::source_location::current())
+{
+    log_detail::emit(::logging::LogLevel::Error, domain, message, loc);
+}

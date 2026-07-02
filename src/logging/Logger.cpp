@@ -46,11 +46,20 @@ void Logger::shutdown() {
     m_initialized = false;
 }
 
-void Logger::log(LogLevel level, std::string_view domain, std::string_view message) {
+void Logger::log(LogLevel level,
+                 std::string_view domain,
+                 std::string_view message,
+                 std::source_location loc)
+{
     if (static_cast<int>(level) < m_minLevelAtomic.load(std::memory_order_relaxed)) return;
 
-    std::string line = std::format("[{}] [{}] [{}] {}",
-        nowTimestamp(), levelToString(level), domain, message);
+    std::string line = std::format("[{}] [{}] [{}] [{}:{}] {}",
+        nowTimestamp(),
+        levelToString(level),
+        domain,
+        loc.file_name(),
+        loc.line(),
+        message);
 
     {
         std::lock_guard<std::mutex> lk(m_mutex);
