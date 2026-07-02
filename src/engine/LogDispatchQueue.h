@@ -52,9 +52,10 @@ public:
         return true;
     }
 
-    size_t tryPushBatch(const std::vector<LogEntry>& entries, size_t count) {
+    // move-aware: entries가 rvalue이면 각 LogEntry를 move하여 string 복사 제거
+    size_t tryPushBatch(std::vector<LogEntry>& entries, size_t count) {
         if (count == 0) return 0;
-        const size_t n = count < entries.size() ? count : entries.size();
+        const size_t n = (count < entries.size()) ? count : entries.size();
 
         size_t base = m_enqueuePos.load(std::memory_order_relaxed);
         for (;;) {
@@ -85,10 +86,11 @@ public:
         for (size_t i = 0; i < n; ++i) {
             const size_t pos  = base + i;
             Cell*        cell = &m_buf[pos & m_mask];
-            size_t       seq;
+            // spin-wait: 자리가 준비될 때까지 대기 (단일 생산자 경로에서는 즉시 통과)
+            size_t seq;
             do { seq = cell->seq.load(std::memory_order_acquire); }
             while (static_cast<intptr_t>(seq) - static_cast<intptr_t>(pos) != 0);
-            cell->data = entries[i];
+            cell->data = std::move(entries[i]);  // ← copy → move: string heap 재할당 제거
             cell->seq.store(pos + 1, std::memory_order_release);
         }
         return n;

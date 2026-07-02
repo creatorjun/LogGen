@@ -9,6 +9,7 @@
 #include <thread>
 #include <mutex>
 #include <shared_mutex>
+#include <chrono>
 #include <flat_map>
 #include <flat_set>
 #include <expected>
@@ -51,7 +52,6 @@ private:
     void pushWorkerError(std::string_view deviceId,
                          std::string_view deviceName,
                          std::string_view message);
-
     void spawnWorkers(const std::string& profileId, int count);
 
     [[nodiscard]] RefreshResult
@@ -64,11 +64,15 @@ private:
     [[nodiscard]] uint64_t
         sendAndDispatch(WorkerContext& ctx, size_t batchSize);
 
-    void updateRateStats(WorkerContext& ctx, uint64_t sentCount);
+    // now를 인자로 받아 루프 내 steady_clock::now() 중복 호출 제거
+    void updateRateStats(WorkerContext& ctx,
+                         uint64_t      sentCount,
+                         std::chrono::steady_clock::time_point now);
 
     bool runTokenBatchPath(WorkerContext& ctx,
                            size_t         maxBatch,
                            uint64_t       nowMs,
+                           std::chrono::steady_clock::time_point now,
                            bool           isFastPath);
 
     static std::string workerKey(const std::string& profileId, int workerIndex) {

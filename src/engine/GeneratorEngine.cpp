@@ -37,20 +37,33 @@
 #pragma comment(lib, "winmm.lib")
 #endif
 
-static inline std::string_view u32ToSV(uint32_t v, char* buf, size_t bufsz) {
+// ─────────────────────────────────────────────────────────────
+// Integer ↔ float 변환 유틸 (fixed-point rate 저장용)
+// ─────────────────────────────────────────────────────────────
+static inline float    fixedToFloat(uint32_t v) noexcept { return static_cast<float>(v) / 100.0f; }
+static inline uint32_t floatToFixed(float v)    noexcept { return static_cast<uint32_t>(v * 100.0f); }
+
+// ─────────────────────────────────────────────────────────────
+// uint32 → string_view (stack 버퍼 사용, 힙 할당 없음)
+// ─────────────────────────────────────────────────────────────
+static inline std::string_view u32ToSV(uint32_t v, char* buf, size_t bufsz) noexcept {
     auto [end, ec] = std::to_chars(buf, buf + bufsz, v);
     return { buf, static_cast<size_t>(end - buf) };
 }
 
-static inline float    fixedToFloat(uint32_t v) { return static_cast<float>(v) / 100.0f; }
-static inline uint32_t floatToFixed(float v)    { return static_cast<uint32_t>(v * 100.0f); }
-
-static inline void assignSV(std::string& dst, std::string_view sv) {
+// ─────────────────────────────────────────────────────────────
+// string_view → string assign (불필요한 재할당 억제)
+// ─────────────────────────────────────────────────────────────
+static inline void assignSV(std::string& dst, std::string_view sv) noexcept {
     dst.assign(sv.data(), sv.size());
 }
 
 namespace {
 
+// ─────────────────────────────────────────────────────────────
+// TokenRefs: flat_map 내 포인터를 한 번만 resolve하여
+//            루프 내 map lookup 비용 제거
+// ─────────────────────────────────────────────────────────────
 struct TokenRefs {
     std::string* timestamp;
     std::string* date;
@@ -138,7 +151,7 @@ TokenRefs resolveTokenRefs(std::flat_map<std::string, std::string>& tokens) {
     };
 }
 
-} // namespace
+} // anonymous namespace
 
 GeneratorEngine::GeneratorEngine(int threadPoolSize, size_t queueCapacity)
     : m_poolSize(threadPoolSize)
@@ -186,24 +199,30 @@ void GeneratorEngine::pushWorkerError(std::string_view deviceId,
 
 GeneratorEngine::RefreshResult
 GeneratorEngine::refreshProfile(WorkerContext& ctx) {
+    // version 체크는 lock 없이 먼저 수행 — 대부분의 경우 여기서 종료
     const uint64_t curVersion = m_profileVersion.load(std::memory_order_acquire);
     if (curVersion == ctx.knownVersion)
         return RefreshState::kNoChange;
 
     DeviceProfile updated;
+    bool collectorChanged;
     {
         std::shared_lock lock(m_statsMutex);
         auto it = m_profileMap.find(ctx.profileId);
         if (it == m_profileMap.end())
             return std::unexpected(std::format("Profile not found: {}", ctx.profileId));
-        updated          = it->second;
+
+        // lock 범위 내에서 collectorChanged 먼저 계산 → lock 해제 후 비용있는 작업 수행
+        const auto& src = it->second;
+        collectorChanged =
+            src.collector.useTCP != ctx.profile.collector.useTCP ||
+            src.collector.ip     != ctx.profile.collector.ip     ||
+            src.collector.port   != ctx.profile.collector.port;
+
+        updated          = src;
         ctx.knownVersion = curVersion;
     }
-
-    const bool collectorChanged =
-        updated.collector.useTCP != ctx.profile.collector.useTCP ||
-        updated.collector.ip     != ctx.profile.collector.ip     ||
-        updated.collector.port   != ctx.profile.collector.port;
+    // ── lock 해제 후 ──────────────────────────────────────────
 
     ctx.profile = updated;
 
@@ -247,6 +266,10 @@ void GeneratorEngine::buildBatch(
     const bool srcIpRandom = p.event.srcIpRandom;
     const bool dstIpRandom = p.event.dstIpRandom;
     const auto& dstPorts   = p.event.dstPorts;
+
+    // deviceId / deviceName 은 batchSize 내내 동일 → 미리 string_view로 캡처
+    const std::string_view devId   = p.id;
+    const std::string_view devName = p.deviceName;
 
     TokenRefs r = resolveTokenRefs(ctx.tokens);
 
@@ -297,14 +320,18 @@ void GeneratorEngine::buildBatch(
             }
         }
 
-        ctx.sendBuf.emplace_back(ctx.templateEngine.render(ctx.tokens));
-
+        // ── 핵심 수정: render() 결과를 move하여 string 복사 횟수 최소화 ──
+        // render()  → rawLog (move, heap 재할당 없음)
+        // sendBuf   → rawLog를 copy 1회 (ISender 인터페이스 유지 목적)
+        // 기존 코드: sendBuf에 먼저 저장 후 back()을 복사 → rawLog에 대입 (복사 2회)
         LogEntry entry;
-        entry.deviceId    = p.id;
-        entry.deviceName  = p.deviceName;
-        entry.rawLog      = ctx.sendBuf.back();
+        entry.deviceId    = devId;    // string_view → string assign (SSO 활용)
+        entry.deviceName  = devName;  // string_view → string assign (SSO 활용)
+        entry.rawLog      = ctx.templateEngine.render(ctx.tokens);  // move-construct
         entry.timestampMs = nowMs;
-        ctx.dispatchBuf.push_back(std::move(entry));
+
+        ctx.sendBuf.push_back(entry.rawLog);                 // copy 1회 (네트워크 전송용)
+        ctx.dispatchBuf.push_back(std::move(entry));         // move (추가 복사 없음)
     }
 }
 
@@ -331,17 +358,19 @@ uint64_t GeneratorEngine::sendAndDispatch(WorkerContext& ctx, size_t batchSize) 
         }
     }
 
+    // dispatchBuf를 move-aware tryPushBatch로 전달 → string 복사 완전 제거
     if (sentCount > 0)
         m_dispatchQueue.tryPushBatch(ctx.dispatchBuf, sentCount);
 
     return sentCount;
 }
 
-void GeneratorEngine::updateRateStats(WorkerContext& ctx, uint64_t sentCount) {
+void GeneratorEngine::updateRateStats(WorkerContext& ctx,
+                                       uint64_t       sentCount,
+                                       std::chrono::steady_clock::time_point now) {
     ctx.logsSentInThisInterval += sentCount;
-    const auto   rateNow = std::chrono::steady_clock::now();
     const double elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(
-        rateNow - ctx.lastRateCalcTime).count();
+        now - ctx.lastRateCalcTime).count();
 
     if (elapsed >= Constants::Engine::kRateCalcIntervalSec) {
         const float rate = static_cast<float>(
@@ -349,7 +378,7 @@ void GeneratorEngine::updateRateStats(WorkerContext& ctx, uint64_t sentCount) {
         if (ctx.devRateFixed)
             ctx.devRateFixed->store(floatToFixed(rate), std::memory_order_relaxed);
         ctx.logsSentInThisInterval = 0;
-        ctx.lastRateCalcTime       = rateNow;
+        ctx.lastRateCalcTime       = now;  // 인자로 받은 now 재사용 — 추가 syscall 없음
     }
 }
 
@@ -357,6 +386,7 @@ bool GeneratorEngine::runTokenBatchPath(
         WorkerContext& ctx,
         size_t         maxBatch,
         uint64_t       nowMs,
+        std::chrono::steady_clock::time_point now,
         bool           isFastPath) {
 
     const size_t batchSize = ctx.rateCtrl.tick(maxBatch);
@@ -389,7 +419,7 @@ bool GeneratorEngine::runTokenBatchPath(
         if (ctx.devCounter) ctx.devCounter->fetch_add(sentCount, std::memory_order_relaxed);
         m_totalSentCount.fetch_add(sentCount, std::memory_order_relaxed);
     }
-    updateRateStats(ctx, sentCount);
+    updateRateStats(ctx, sentCount, now);  // 외부에서 받은 now 재사용
     return true;
 }
 
@@ -568,7 +598,6 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
         ctx.fieldGen.cacheDstIpRange(ctx.profile.event.dstIpStart, ctx.profile.event.dstIpEnd);
 
     ctx.scenarioSelector.updateScenarios(ctx.profile.event.scenarios);
-
     ctx.lastRateCalcTime = std::chrono::steady_clock::now();
 
     ctx.tokens["EQP_IP"]          = ctx.profile.eqpIp;
@@ -584,6 +613,18 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
     ctx.dispatchBuf.reserve(Constants::Engine::kFastBatchSize);
 
     const double workerRateDivisor = static_cast<double>(totalWorkers);
+
+    // ── steady_clock 기반 epoch offset 사전 계산 ──────────────────
+    // system_clock::now() syscall을 루프 내에서 매번 호출하지 않도록
+    // 초기화 시 1회 계산한 offset으로 nowMs를 steady_clock에서 유도
+    const int64_t epochOffsetMs = [&] {
+        const auto sysNow    = std::chrono::system_clock::now();
+        const auto steadyNow = std::chrono::steady_clock::now();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+                   sysNow.time_since_epoch()).count()
+             - std::chrono::duration_cast<std::chrono::milliseconds>(
+                   steadyNow.time_since_epoch()).count();
+    }();
 
     while (m_running.load(std::memory_order_relaxed)) {
         if (!ctx.profile.enabled) {
@@ -606,26 +647,27 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
 
         const double effectiveRate = ctx.rateCtrl.effectiveRate();
 
+        // ── 핵심 수정: steady_clock 1회 호출로 nowMs + rateStats 모두 처리 ──
+        const auto     now   = std::chrono::steady_clock::now();
         const uint64_t nowMs = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::system_clock::now().time_since_epoch()).count());
+                now.time_since_epoch()).count() + epochOffsetMs);
 
         ctx.sendBuf.clear();
         ctx.dispatchBuf.clear();
 
         if (effectiveRate >= Constants::Engine::kFastPathThreshold) {
-            if (!runTokenBatchPath(ctx, Constants::Engine::kFastBatchSize, nowMs, true))
+            if (!runTokenBatchPath(ctx, Constants::Engine::kFastBatchSize, nowMs, now, true))
                 break;
 
         } else if (effectiveRate >= Constants::Engine::kMidPathThreshold) {
-            if (!runTokenBatchPath(ctx, Constants::Engine::kBatchSize, nowMs, false))
+            if (!runTokenBatchPath(ctx, Constants::Engine::kBatchSize, nowMs, now, false))
                 break;
 
         } else {
             const size_t currentBatchSize = (effectiveRate < 60.0) ? 1
                                           : Constants::Engine::kBatchSize;
             const double batchIntervalSec = static_cast<double>(currentBatchSize) / effectiveRate;
-            const auto   now              = std::chrono::steady_clock::now();
             const auto   nextLoopTime     = now + std::chrono::duration_cast<
                 std::chrono::steady_clock::duration>(
                     std::chrono::duration<double>(batchIntervalSec));
@@ -641,7 +683,7 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
                 if (ctx.devCounter) ctx.devCounter->fetch_add(sentCount, std::memory_order_relaxed);
                 m_totalSentCount.fetch_add(sentCount, std::memory_order_relaxed);
             }
-            updateRateStats(ctx, sentCount);
+            updateRateStats(ctx, sentCount, now);  // now 재사용
 
             std::this_thread::sleep_until(nextLoopTime);
         }
