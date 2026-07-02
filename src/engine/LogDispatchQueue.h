@@ -66,11 +66,11 @@ public:
                 return tryPushBatch(entries, free < n ? free : n);
             }
 
-            const size_t tail    = base + n;
-            const size_t lastSeq = m_buf[(tail - 1) & m_mask]
-                                       .seq.load(std::memory_order_acquire);
-            const intptr_t diff  = static_cast<intptr_t>(lastSeq)
-                                 - static_cast<intptr_t>(tail - 1);
+            const size_t   tail    = base + n;
+            const size_t   lastSeq = m_buf[(tail - 1) & m_mask]
+                                         .seq.load(std::memory_order_acquire);
+            const intptr_t diff    = static_cast<intptr_t>(lastSeq)
+                                   - static_cast<intptr_t>(tail - 1);
             if (diff < 0) {
                 const size_t free = m_capacity - used;
                 if (free == 0) return 0;
@@ -168,10 +168,14 @@ private:
     static constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
 
     struct alignas(kCacheLine) PaddedAtomic {
-        std::atomic<size_t> value;
+        std::atomic<size_t> value{0};
         char                pad[kCacheLine - sizeof(std::atomic<size_t>)];
 
-        explicit PaddedAtomic(size_t v = 0) : value(v) {}
+        void   store(size_t v, std::memory_order o)                    noexcept { value.store(v, o); }
+        size_t load (std::memory_order o)                        const noexcept { return value.load(o); }
+        size_t fetch_add(size_t v, std::memory_order o)                noexcept { return value.fetch_add(v, o); }
+        bool   compare_exchange_weak(size_t& exp, size_t des,
+                                     std::memory_order o)              noexcept { return value.compare_exchange_weak(exp, des, o); }
     };
 
     static_assert(sizeof(PaddedAtomic) == kCacheLine,
