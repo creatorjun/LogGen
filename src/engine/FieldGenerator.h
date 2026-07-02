@@ -88,6 +88,18 @@ private:
     mutable std::uniform_int_distribution<uint32_t> m_distCachedDstIp;
     mutable bool     m_hasCachedDstIpRange = false;
 
+    // generateRandomCount 캐시: buildBatch에서 사용하는 두 고정 범위 [1,100], [64,65535]
+    mutable std::uniform_int_distribution<uint32_t> m_distPktCnt{ 1u, 100u };
+    mutable std::uniform_int_distribution<uint32_t> m_distByteCnt{ 64u, 65535u };
+
+    // generateRandomPort 캐시: 포트 목록 크기가 바뀌었을 때만 param() 재설정
+    mutable std::uniform_int_distribution<size_t> m_distDstPort{ 0, 0 };
+    mutable size_t                                m_lastDstPortCount = 0;
+
+    // pickIndex 캐시: count가 바뀌었을 때만 param() 재설정
+    mutable std::uniform_int_distribution<size_t> m_distPickIndex{ 0, 0 };
+    mutable size_t                                m_lastPickCount = 0;
+
     mutable char   m_tsBuf[32]   = {};
     mutable size_t m_tsLen       = 0;
     mutable char   m_dateBuf[16] = {};

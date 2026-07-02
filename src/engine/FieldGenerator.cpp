@@ -116,14 +116,23 @@ std::string_view FieldGenerator::generateRandomDstIp() const {
     return { m_dstIpBuf, m_dstIpLen };
 }
 
+// 2-arg 오버로드: 캐시된 범위와 일치하면 분포 재생성 없이 재사용,
+// 다른 범위일 때만 로컀 데지선 배포 객체 생성
 std::string FieldGenerator::generateRandomSrcIp(
     const std::string& startIp, const std::string& endIp) const
 {
     const uint32_t s = ipToUint(startIp);
     const uint32_t e = ipToUint(endIp);
-    std::uniform_int_distribution<uint32_t> d(std::min(s, e), std::max(s, e));
+    const uint32_t lo = std::min(s, e);
+    const uint32_t hi = std::max(s, e);
+
     char buf[16]; size_t len;
-    uintToIpBuf(d(m_rng), buf, len);
+    if (m_hasCachedIpRange && lo == m_cachedIpStart && hi == m_cachedIpEnd) {
+        uintToIpBuf(m_distCachedIp(m_rng), buf, len);
+    } else {
+        std::uniform_int_distribution<uint32_t> d(lo, hi);
+        uintToIpBuf(d(m_rng), buf, len);
+    }
     return std::string(buf, len);
 }
 
@@ -133,8 +142,12 @@ uint16_t FieldGenerator::generateRandomSrcPort() const {
 
 uint16_t FieldGenerator::generateRandomPort(const std::vector<uint16_t>& ports) const {
     if (ports.empty()) return 80;
-    std::uniform_int_distribution<size_t> d(0, ports.size() - 1);
-    return ports[d(m_rng)];
+    const size_t n = ports.size();
+    if (n != m_lastDstPortCount) {
+        m_distDstPort     = std::uniform_int_distribution<size_t>(0, n - 1);
+        m_lastDstPortCount = n;
+    }
+    return ports[m_distDstPort(m_rng)];
 }
 
 std::string_view FieldGenerator::generateAction(int allowPct) const {
@@ -236,14 +249,21 @@ std::string_view FieldGenerator::generateSeqNum() const {
 
 uint32_t FieldGenerator::generateRandomCount(uint32_t minVal, uint32_t maxVal) const {
     if (minVal > maxVal) std::swap(minVal, maxVal);
+    // buildBatch에서 사용하는 두 고정 범위는 캐시된 맴버 분포를 직접 호출
+    if (minVal == 1u   && maxVal == 100u)   return m_distPktCnt(m_rng);
+    if (minVal == 64u  && maxVal == 65535u) return m_distByteCnt(m_rng);
+    // 이외 임의 범위: 로컀 임시 분포 (hot path에서 호출되지 않음)
     std::uniform_int_distribution<uint32_t> d(minVal, maxVal);
     return d(m_rng);
 }
 
 size_t FieldGenerator::pickIndex(size_t count) const {
     if (count == 0) return 0;
-    std::uniform_int_distribution<size_t> d(0, count - 1);
-    return d(m_rng);
+    if (count != m_lastPickCount) {
+        m_distPickIndex  = std::uniform_int_distribution<size_t>(0, count - 1);
+        m_lastPickCount  = count;
+    }
+    return m_distPickIndex(m_rng);
 }
 
 std::string FieldGenerator::generate(const std::string& key) const {
