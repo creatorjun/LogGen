@@ -8,7 +8,6 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
-#include <condition_variable>
 #include <shared_mutex>
 #include <flat_map>
 #include <flat_set>
@@ -37,12 +36,11 @@ public:
     void         stop()                                                            override;
     void         updateProfile(const DeviceProfile& profile)                       override;
     void         setDateOffsetDays(int days)                                       override;
+    bool         loadTIPool(const std::string& csvPath)                            override;
     [[nodiscard]] uint64_t getTotalSent() const                                    override;
     [[nodiscard]] uint64_t getSentByDevice(const std::string& deviceId) const      override;
     [[nodiscard]] float    getCurrentRateByDevice(const std::string& deviceId) const override;
     [[nodiscard]] bool     isRunning() const override { return m_running.load(std::memory_order_acquire); }
-
-    [[nodiscard]] bool loadTIPool(const std::string& csvPath) { return m_tiPool.loadFromCSV(csvPath); }
 
 private:
     enum class RefreshState {
@@ -109,6 +107,35 @@ private:
                          uint64_t&               logsSentInThisInterval,
                          std::chrono::steady_clock::time_point& lastRateCalcTime,
                          std::atomic<uint32_t>*  devRateFixed);
+
+    bool runTokenBatchPath(const std::string&       profileId,
+                           uint64_t&                knownVersion,
+                           DeviceProfile&           p,
+                           std::unique_ptr<ISender>& senderBase,
+                           UDPSender*&              udpSender,
+                           int&                     consecutiveFails,
+                           std::chrono::steady_clock::time_point& lastReconnectAttempt,
+                           LogTemplateEngine&       templateEngine,
+                           FieldGenerator&          fieldGen,
+                           ScenarioSelector&        scenarioSelector,
+                           std::flat_map<std::string, std::string>& tokens,
+                           bool&                    prevBurstEnable,
+                           bool&                    inBurstMode,
+                           std::chrono::steady_clock::time_point& burstStartTime,
+                           double&                  tokenBucket,
+                           std::chrono::steady_clock::time_point& tokenLastTime,
+                           double                   effectiveRate,
+                           size_t                   maxBatch,
+                           uint64_t                 nowMs,
+                           std::vector<std::string>& sendBuf,
+                           std::vector<LogEntry>&    dispatchBuf,
+                           char* srcPortBuf, char* dstPortBuf,
+                           char* pktBuf,     char* byteBuf,
+                           std::atomic<uint64_t>*   devCounter,
+                           std::atomic<uint32_t>*   devRateFixed,
+                           uint64_t&                logsSentInThisInterval,
+                           std::chrono::steady_clock::time_point& lastRateCalcTime,
+                           bool                     isFastPath);
 
     int                               m_poolSize;
     std::unique_ptr<class ThreadPool> m_threadPool;

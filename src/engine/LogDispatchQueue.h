@@ -58,17 +58,25 @@ public:
 
         size_t base = m_enqueuePos.load(std::memory_order_relaxed);
         for (;;) {
-            const size_t tail = base + n;
-            const size_t lastSeq = m_buf[(tail - 1) & m_mask].seq.load(std::memory_order_acquire);
-            const intptr_t diff  = static_cast<intptr_t>(lastSeq)
-                                 - static_cast<intptr_t>(tail - 1);
-            if (diff < 0) {
-                size_t free = m_capacity -
-                    (m_enqueuePos.load(std::memory_order_relaxed) -
-                     m_dequeuePos.load(std::memory_order_relaxed));
+            const size_t deq  = m_dequeuePos.load(std::memory_order_acquire);
+            const size_t used = base - deq;
+            if (used >= m_capacity) {
+                const size_t free = m_capacity - used;
                 if (free == 0) return 0;
                 return tryPushBatch(entries, free < n ? free : n);
             }
+
+            const size_t tail    = base + n;
+            const size_t lastSeq = m_buf[(tail - 1) & m_mask]
+                                       .seq.load(std::memory_order_acquire);
+            const intptr_t diff  = static_cast<intptr_t>(lastSeq)
+                                 - static_cast<intptr_t>(tail - 1);
+            if (diff < 0) {
+                const size_t free = m_capacity - used;
+                if (free == 0) return 0;
+                return tryPushBatch(entries, free < n ? free : n);
+            }
+
             if (m_enqueuePos.compare_exchange_weak(base, base + n,
                     std::memory_order_relaxed))
                 break;
@@ -157,17 +165,17 @@ public:
     [[nodiscard]] size_t capacity() const noexcept { return m_capacity; }
 
 private:
-    static constexpr size_t kCacheLine =
-        std::hardware_destructive_interference_size;
+    static constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
 
-    static constexpr size_t kAtomicSz  = sizeof(std::atomic<size_t>);
-    static constexpr size_t kPadSize   = kCacheLine > kAtomicSz
-                                             ? kCacheLine - kAtomicSz
-                                             : 1;
+    struct alignas(kCacheLine) PaddedAtomic {
+        std::atomic<size_t> value;
+        char                pad[kCacheLine - sizeof(std::atomic<size_t>)];
 
-    static_assert(kCacheLine >= kAtomicSz,
-        "hardware_destructive_interference_size < sizeof(atomic<size_t>): "
-        "padding would underflow — review platform cache line assumptions");
+        explicit PaddedAtomic(size_t v = 0) : value(v) {}
+    };
+
+    static_assert(sizeof(PaddedAtomic) == kCacheLine,
+        "PaddedAtomic must be exactly one cache line");
 
     struct alignas(kCacheLine) Cell {
         std::atomic<size_t> seq;
@@ -182,15 +190,9 @@ private:
         return ++v;
     }
 
-    alignas(kCacheLine) std::atomic<size_t> m_enqueuePos;
-    [[no_unique_address]]
-    std::array<std::byte, kPadSize>         m_padEnqueue;
-
-    alignas(kCacheLine) std::atomic<size_t> m_dequeuePos;
-    [[no_unique_address]]
-    std::array<std::byte, kPadSize>         m_padDequeue;
-
-    alignas(kCacheLine) std::atomic<bool>   m_wakeFlag;
+    PaddedAtomic              m_enqueuePos;
+    PaddedAtomic              m_dequeuePos;
+    alignas(kCacheLine) std::atomic<bool> m_wakeFlag{false};
 
     size_t            m_capacity;
     size_t            m_mask;

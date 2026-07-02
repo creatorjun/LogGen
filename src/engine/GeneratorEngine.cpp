@@ -71,6 +71,21 @@ struct TokenRefs {
     std::string* tiSource;
 };
 
+void ensureTokenKeys(std::flat_map<std::string, std::string>& tokens) {
+    static constexpr const char* kKeys[] = {
+        "TIMESTAMP", "DATE", "TIME", "ATTACK_SEQ_NUM",
+        "SRC_IP",    "DST_IP",  "SRC_PORT",  "DST_PORT",
+        "ACTION",    "ATTACK_NAME", "SEVERITY", "PROTO",
+        "PRIORITY",  "EVENT_TYPE",  "CONN_ID",  "PID",
+        "EVENT_ID",  "USERNAME",    "HTTP_METHOD", "URI",
+        "HTTP_HOST", "PKT_CNT",     "BYTE_CNT",
+        "TI_IP",     "TI_CATEGORY", "TI_SEVERITY",
+        "TI_COUNTRY", "TI_COUNTRY_CODE", "TI_DESCRIPTION", "TI_SOURCE",
+    };
+    for (const char* k : kKeys)
+        tokens.try_emplace(k);
+}
+
 TokenRefs resolveTokenRefs(std::flat_map<std::string, std::string>& tokens) {
     auto get = [&](const char* key) -> std::string* {
         auto it = tokens.find(key);
@@ -134,6 +149,10 @@ void GeneratorEngine::setLogCallback(LogCallback cb) {
 
 void GeneratorEngine::setDateOffsetDays(int days) {
     m_dateOffsetDays.store(days, std::memory_order_relaxed);
+}
+
+bool GeneratorEngine::loadTIPool(const std::string& csvPath) {
+    return m_tiPool.loadFromCSV(csvPath);
 }
 
 void GeneratorEngine::pushWorkerError(std::string_view deviceId,
@@ -309,9 +328,9 @@ void GeneratorEngine::buildBatch(
         if (r.pktCnt)   assignSV(*r.pktCnt,   u32ToSV(fieldGen.generateRandomCount(1,    100), pktBuf,  8));
         if (r.byteCnt)  assignSV(*r.byteCnt,  u32ToSV(fieldGen.generateRandomCount(64, 65535), byteBuf, 8));
 
-        if (r.tiIp       && r.srcIp)     *r.tiIp       = *r.srcIp;
+        if (r.tiIp       && r.srcIp)      *r.tiIp       = *r.srcIp;
         if (r.tiCategory && r.attackName) *r.tiCategory = *r.attackName;
-        if (r.tiSeverity && r.severity)  *r.tiSeverity = *r.severity;
+        if (r.tiSeverity && r.severity)   *r.tiSeverity = *r.severity;
 
         if (useTIPool && !m_tiPool.empty()) {
             const TIEntry ti = m_tiPool.getRandomTI();
@@ -410,6 +429,92 @@ void GeneratorEngine::updateRateStats(
         logsSentInThisInterval = 0;
         lastRateCalcTime       = rateNow;
     }
+}
+
+bool GeneratorEngine::runTokenBatchPath(
+        const std::string&       profileId,
+        uint64_t&                knownVersion,
+        DeviceProfile&           p,
+        std::unique_ptr<ISender>& senderBase,
+        UDPSender*&              udpSender,
+        int&                     consecutiveFails,
+        std::chrono::steady_clock::time_point& lastReconnectAttempt,
+        LogTemplateEngine&       templateEngine,
+        FieldGenerator&          fieldGen,
+        ScenarioSelector&        scenarioSelector,
+        std::flat_map<std::string, std::string>& tokens,
+        bool&                    prevBurstEnable,
+        bool&                    inBurstMode,
+        std::chrono::steady_clock::time_point& burstStartTime,
+        double&                  tokenBucket,
+        std::chrono::steady_clock::time_point& tokenLastTime,
+        double                   effectiveRate,
+        size_t                   maxBatch,
+        uint64_t                 nowMs,
+        std::vector<std::string>& sendBuf,
+        std::vector<LogEntry>&    dispatchBuf,
+        char* srcPortBuf, char* dstPortBuf,
+        char* pktBuf,     char* byteBuf,
+        std::atomic<uint64_t>*   devCounter,
+        std::atomic<uint32_t>*   devRateFixed,
+        uint64_t&                logsSentInThisInterval,
+        std::chrono::steady_clock::time_point& lastRateCalcTime,
+        bool                     isFastPath) {
+
+    const auto   nowToken = std::chrono::steady_clock::now();
+    const double dtSec    = std::chrono::duration_cast<std::chrono::duration<double>>(
+        nowToken - tokenLastTime).count();
+    tokenLastTime = nowToken;
+
+    tokenBucket += effectiveRate * dtSec;
+    if (tokenBucket > static_cast<double>(maxBatch))
+        tokenBucket  = static_cast<double>(maxBatch);
+
+    if (tokenBucket < 1.0) {
+        if (isFastPath) {
+            auto refreshRes = refreshProfile(
+                profileId, knownVersion, p,
+                senderBase, udpSender, consecutiveFails,
+                templateEngine, fieldGen, scenarioSelector,
+                tokens, prevBurstEnable, inBurstMode, burstStartTime);
+            if (!refreshRes) return false;
+            std::this_thread::yield();
+        } else {
+            const double waitSec = (1.0 - tokenBucket) / effectiveRate;
+            std::this_thread::sleep_for(
+                std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                    std::chrono::duration<double>(waitSec)));
+        }
+        return true;
+    }
+
+    const size_t tokenSz   = static_cast<size_t>(tokenBucket);
+    const size_t batchSize = tokenSz < maxBatch ? tokenSz : maxBatch;
+
+    auto refreshRes = refreshProfile(
+        profileId, knownVersion, p,
+        senderBase, udpSender, consecutiveFails,
+        templateEngine, fieldGen, scenarioSelector,
+        tokens, prevBurstEnable, inBurstMode, burstStartTime);
+    if (!refreshRes) return false;
+
+    buildBatch(p, fieldGen, scenarioSelector, templateEngine,
+        tokens, batchSize, nowMs,
+        sendBuf, dispatchBuf,
+        srcPortBuf, dstPortBuf, pktBuf, byteBuf);
+
+    const uint64_t sentCount = sendAndDispatch(
+        p, senderBase, udpSender, consecutiveFails, lastReconnectAttempt,
+        batchSize, sendBuf, dispatchBuf);
+
+    tokenBucket -= static_cast<double>(sentCount);
+
+    if (sentCount > 0) {
+        if (devCounter) devCounter->fetch_add(sentCount, std::memory_order_relaxed);
+        m_totalSentCount.fetch_add(sentCount, std::memory_order_relaxed);
+    }
+    updateRateStats(sentCount, logsSentInThisInterval, lastRateCalcTime, devRateFixed);
+    return true;
 }
 
 void GeneratorEngine::start(const std::vector<DeviceProfile>& profiles) {
@@ -566,15 +671,14 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
     bool     prevBurstEnable         = p.scheduler.burstEnable;
 
     std::flat_map<std::string, std::string> tokens;
-
     tokens["EQP_IP"]          = p.eqpIp;
     tokens["TI_COUNTRY"]      = "UNKNOWN";
     tokens["TI_COUNTRY_CODE"] = "ZZ";
     tokens["TI_DESCRIPTION"]  = "N/A";
     tokens["TI_SOURCE"]       = "LOCAL";
-
     if (!p.event.srcIpRandom) tokens["SRC_IP"] = p.event.srcIp;
     if (!p.event.dstIpRandom) tokens["DST_IP"] = p.event.dstIpFixed;
+    ensureTokenKeys(tokens);
 
     char srcPortBuf[8], dstPortBuf[8], pktBuf[8], byteBuf[8];
 
@@ -619,112 +723,42 @@ void GeneratorEngine::workerLoop(const std::string& profileId) {
         dispatchBuf.clear();
 
         if (effectiveRate >= Constants::Engine::kFastPathThreshold) {
-            const auto   nowFast = std::chrono::steady_clock::now();
-            const double dtSec   = std::chrono::duration_cast<std::chrono::duration<double>>(
-                nowFast - tokenLastTime).count();
-            tokenLastTime = nowFast;
-
-            tokenBucket += effectiveRate * dtSec;
-            if (tokenBucket > static_cast<double>(Constants::Engine::kFastBatchSize))
-                tokenBucket  = static_cast<double>(Constants::Engine::kFastBatchSize);
-
-            if (tokenBucket < 1.0) {
-                auto refreshRes = refreshProfile(
+            if (!runTokenBatchPath(
                     profileId, knownVersion, p,
-                    senderBase, udpSender, consecutiveFails,
+                    senderBase, udpSender, consecutiveFails, lastReconnectAttempt,
                     templateEngine, fieldGen, scenarioSelector,
-                    tokens, prevBurstEnable, inBurstMode, burstStartTime);
-                if (!refreshRes) break;
-                std::this_thread::yield();
-                continue;
-            }
-
-            const size_t tokenSz   = static_cast<size_t>(tokenBucket);
-            const size_t batchSize = (tokenSz < Constants::Engine::kFastBatchSize)
-                                   ? tokenSz
-                                   : Constants::Engine::kFastBatchSize;
-
-            auto refreshRes = refreshProfile(
-                profileId, knownVersion, p,
-                senderBase, udpSender, consecutiveFails,
-                templateEngine, fieldGen, scenarioSelector,
-                tokens, prevBurstEnable, inBurstMode, burstStartTime);
-            if (!refreshRes) break;
-
-            buildBatch(p, fieldGen, scenarioSelector, templateEngine,
-                tokens, batchSize, nowMs,
-                sendBuf, dispatchBuf,
-                srcPortBuf, dstPortBuf, pktBuf, byteBuf);
-
-            const uint64_t sentCount = sendAndDispatch(
-                p, senderBase, udpSender, consecutiveFails, lastReconnectAttempt,
-                batchSize, sendBuf, dispatchBuf);
-
-            tokenBucket -= static_cast<double>(sentCount);
-
-            if (sentCount > 0) {
-                if (devCounter) devCounter->fetch_add(sentCount, std::memory_order_relaxed);
-                m_totalSentCount.fetch_add(sentCount, std::memory_order_relaxed);
-            }
-            updateRateStats(sentCount, logsSentInThisInterval, lastRateCalcTime, devRateFixed);
+                    tokens, prevBurstEnable, inBurstMode, burstStartTime,
+                    tokenBucket, tokenLastTime,
+                    effectiveRate, Constants::Engine::kFastBatchSize, nowMs,
+                    sendBuf, dispatchBuf,
+                    srcPortBuf, dstPortBuf, pktBuf, byteBuf,
+                    devCounter, devRateFixed,
+                    logsSentInThisInterval, lastRateCalcTime,
+                    true))
+                break;
 
         } else if (effectiveRate >= Constants::Engine::kMidPathThreshold) {
-            const auto   nowMid = std::chrono::steady_clock::now();
-            const double dtSec  = std::chrono::duration_cast<std::chrono::duration<double>>(
-                nowMid - tokenLastTime).count();
-            tokenLastTime = nowMid;
-
-            tokenBucket += effectiveRate * dtSec;
-            if (tokenBucket > static_cast<double>(Constants::Engine::kBatchSize))
-                tokenBucket  = static_cast<double>(Constants::Engine::kBatchSize);
-
-            if (tokenBucket < 1.0) {
-                const double waitSec = (1.0 - tokenBucket) / effectiveRate;
-                const auto   waitDur = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-                    std::chrono::duration<double>(waitSec));
-                m_running.wait(true, std::memory_order_relaxed);
-                if (!m_running.load(std::memory_order_relaxed)) break;
-                (void)waitDur;
-                continue;
-            }
-
-            const size_t tokenSz   = static_cast<size_t>(tokenBucket);
-            const size_t batchSize = (tokenSz < Constants::Engine::kBatchSize)
-                                   ? tokenSz
-                                   : Constants::Engine::kBatchSize;
-
-            auto refreshRes = refreshProfile(
-                profileId, knownVersion, p,
-                senderBase, udpSender, consecutiveFails,
-                templateEngine, fieldGen, scenarioSelector,
-                tokens, prevBurstEnable, inBurstMode, burstStartTime);
-            if (!refreshRes) break;
-
-            buildBatch(p, fieldGen, scenarioSelector, templateEngine,
-                tokens, batchSize, nowMs,
-                sendBuf, dispatchBuf,
-                srcPortBuf, dstPortBuf, pktBuf, byteBuf);
-
-            const uint64_t sentCount = sendAndDispatch(
-                p, senderBase, udpSender, consecutiveFails, lastReconnectAttempt,
-                batchSize, sendBuf, dispatchBuf);
-
-            tokenBucket -= static_cast<double>(sentCount);
-
-            if (sentCount > 0) {
-                if (devCounter) devCounter->fetch_add(sentCount, std::memory_order_relaxed);
-                m_totalSentCount.fetch_add(sentCount, std::memory_order_relaxed);
-            }
-            updateRateStats(sentCount, logsSentInThisInterval, lastRateCalcTime, devRateFixed);
+            if (!runTokenBatchPath(
+                    profileId, knownVersion, p,
+                    senderBase, udpSender, consecutiveFails, lastReconnectAttempt,
+                    templateEngine, fieldGen, scenarioSelector,
+                    tokens, prevBurstEnable, inBurstMode, burstStartTime,
+                    tokenBucket, tokenLastTime,
+                    effectiveRate, Constants::Engine::kBatchSize, nowMs,
+                    sendBuf, dispatchBuf,
+                    srcPortBuf, dstPortBuf, pktBuf, byteBuf,
+                    devCounter, devRateFixed,
+                    logsSentInThisInterval, lastRateCalcTime,
+                    false))
+                break;
 
         } else {
             const size_t currentBatchSize = (effectiveRate < 60.0) ? 1
                                           : Constants::Engine::kBatchSize;
             const double batchIntervalSec = static_cast<double>(currentBatchSize) / effectiveRate;
-            const auto   batchDuration    = std::chrono::duration_cast<
+            const auto   nextLoopTime     = now + std::chrono::duration_cast<
                 std::chrono::steady_clock::duration>(
                     std::chrono::duration<double>(batchIntervalSec));
-            const auto nextLoopTime = now + batchDuration;
 
             auto refreshRes = refreshProfile(
                 profileId, knownVersion, p,
