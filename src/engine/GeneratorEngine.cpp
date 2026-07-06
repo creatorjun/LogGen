@@ -37,33 +37,20 @@
 #pragma comment(lib, "winmm.lib")
 #endif
 
-// ─────────────────────────────────────────────────────────────
-// Integer ↔ float 변환 유틸 (fixed-point rate 저장용)
-// ─────────────────────────────────────────────────────────────
 static inline float    fixedToFloat(uint32_t v) noexcept { return static_cast<float>(v) / 100.0f; }
 static inline uint32_t floatToFixed(float v)    noexcept { return static_cast<uint32_t>(v * 100.0f); }
 
-// ─────────────────────────────────────────────────────────────
-// uint32 → string_view (stack 버퍼 사용, 힙 할당 없음)
-// ─────────────────────────────────────────────────────────────
 static inline std::string_view u32ToSV(uint32_t v, char* buf, size_t bufsz) noexcept {
     auto [end, ec] = std::to_chars(buf, buf + bufsz, v);
     return { buf, static_cast<size_t>(end - buf) };
 }
 
-// ─────────────────────────────────────────────────────────────
-// string_view → string assign (불필요한 재할당 억제)
-// ─────────────────────────────────────────────────────────────
 static inline void assignSV(std::string& dst, std::string_view sv) noexcept {
     dst.assign(sv.data(), sv.size());
 }
 
 namespace {
 
-// ─────────────────────────────────────────────────────────────
-// TokenRefs: flat_map 내 포인터를 한 번만 resolve하여
-//            루프 내 map lookup 비용 제거
-// ─────────────────────────────────────────────────────────────
 struct TokenRefs {
     std::string* timestamp;
     std::string* date;
@@ -199,7 +186,6 @@ void GeneratorEngine::pushWorkerError(std::string_view deviceId,
 
 GeneratorEngine::RefreshResult
 GeneratorEngine::refreshProfile(WorkerContext& ctx) {
-    // version 체크는 lock 없이 먼저 수행 — 대부분의 경우 여기서 종료
     const uint64_t curVersion = m_profileVersion.load(std::memory_order_acquire);
     if (curVersion == ctx.knownVersion)
         return RefreshState::kNoChange;
@@ -212,7 +198,6 @@ GeneratorEngine::refreshProfile(WorkerContext& ctx) {
         if (it == m_profileMap.end())
             return std::unexpected(std::format("Profile not found: {}", ctx.profileId));
 
-        // lock 범위 내에서 collectorChanged 먼저 계산 → lock 해제 후 비용있는 작업 수행
         const auto& src = it->second;
         collectorChanged =
             src.collector.useTCP != ctx.profile.collector.useTCP ||
@@ -222,7 +207,6 @@ GeneratorEngine::refreshProfile(WorkerContext& ctx) {
         updated          = src;
         ctx.knownVersion = curVersion;
     }
-    // ── lock 해제 후 ──────────────────────────────────────────
 
     ctx.profile = updated;
 
@@ -267,13 +251,26 @@ void GeneratorEngine::buildBatch(
     const bool dstIpRandom = p.event.dstIpRandom;
     const auto& dstPorts   = p.event.dstPorts;
 
-    // deviceId / deviceName 은 batchSize 내내 동일 → 미리 string_view로 캡처
     const std::string_view devId   = p.id;
     const std::string_view devName = p.deviceName;
 
     TokenRefs r = resolveTokenRefs(ctx.tokens);
 
     for (size_t bi = 0; bi < batchSize; ++bi) {
+        const ScenarioResult scenario = ctx.scenarioSelector.select();
+
+        LogEntry entry;
+        entry.deviceId    = devId;
+        entry.deviceName  = devName;
+        entry.timestampMs = nowMs;
+
+        if (scenario.isCustom) {
+            entry.rawLog.assign(scenario.customLog.data(), scenario.customLog.size());
+            ctx.sendBuf.push_back(entry.rawLog);
+            ctx.dispatchBuf.push_back(std::move(entry));
+            continue;
+        }
+
         if (r.timestamp)    assignSV(*r.timestamp,    ctx.fieldGen.generateTimestamp());
         if (r.date)         assignSV(*r.date,         ctx.fieldGen.generateDate());
         if (r.time)         assignSV(*r.time,         ctx.fieldGen.generateTime());
@@ -285,7 +282,7 @@ void GeneratorEngine::buildBatch(
         if (r.srcPort)  assignSV(*r.srcPort,  u32ToSV(ctx.fieldGen.generateRandomSrcPort(),       ctx.srcPortBuf, 8));
         if (r.dstPort)  assignSV(*r.dstPort,  u32ToSV(ctx.fieldGen.generateRandomPort(dstPorts),  ctx.dstPortBuf, 8));
         if (r.action)   assignSV(*r.action,   ctx.fieldGen.generateAction(allowPct));
-        if (r.attackName) assignSV(*r.attackName, ctx.scenarioSelector.selectAttackScenario());
+        if (r.attackName) assignSV(*r.attackName, scenario.attackName);
         if (r.severity) assignSV(*r.severity, ctx.fieldGen.generateSeverity());
         if (r.proto)    assignSV(*r.proto,    ctx.fieldGen.generateProto());
         if (r.priority) assignSV(*r.priority, ctx.fieldGen.generatePriority());
@@ -320,18 +317,9 @@ void GeneratorEngine::buildBatch(
             }
         }
 
-        // ── 핵심 수정: render() 결과를 move하여 string 복사 횟수 최소화 ──
-        // render()  → rawLog (move, heap 재할당 없음)
-        // sendBuf   → rawLog를 copy 1회 (ISender 인터페이스 유지 목적)
-        // 기존 코드: sendBuf에 먼저 저장 후 back()을 복사 → rawLog에 대입 (복사 2회)
-        LogEntry entry;
-        entry.deviceId    = devId;    // string_view → string assign (SSO 활용)
-        entry.deviceName  = devName;  // string_view → string assign (SSO 활용)
-        entry.rawLog      = ctx.templateEngine.render(ctx.tokens);  // move-construct
-        entry.timestampMs = nowMs;
-
-        ctx.sendBuf.push_back(entry.rawLog);                 // copy 1회 (네트워크 전송용)
-        ctx.dispatchBuf.push_back(std::move(entry));         // move (추가 복사 없음)
+        entry.rawLog = ctx.templateEngine.render(ctx.tokens);
+        ctx.sendBuf.push_back(entry.rawLog);
+        ctx.dispatchBuf.push_back(std::move(entry));
     }
 }
 
@@ -358,7 +346,6 @@ uint64_t GeneratorEngine::sendAndDispatch(WorkerContext& ctx, size_t batchSize) 
         }
     }
 
-    // dispatchBuf를 move-aware tryPushBatch로 전달 → string 복사 완전 제거
     if (sentCount > 0)
         m_dispatchQueue.tryPushBatch(ctx.dispatchBuf, sentCount);
 
@@ -378,7 +365,7 @@ void GeneratorEngine::updateRateStats(WorkerContext& ctx,
         if (ctx.devRateFixed)
             ctx.devRateFixed->store(floatToFixed(rate), std::memory_order_relaxed);
         ctx.logsSentInThisInterval = 0;
-        ctx.lastRateCalcTime       = now;  // 인자로 받은 now 재사용 — 추가 syscall 없음
+        ctx.lastRateCalcTime       = now;
     }
 }
 
@@ -419,7 +406,7 @@ bool GeneratorEngine::runTokenBatchPath(
         if (ctx.devCounter) ctx.devCounter->fetch_add(sentCount, std::memory_order_relaxed);
         m_totalSentCount.fetch_add(sentCount, std::memory_order_relaxed);
     }
-    updateRateStats(ctx, sentCount, now);  // 외부에서 받은 now 재사용
+    updateRateStats(ctx, sentCount, now);
     return true;
 }
 
@@ -614,9 +601,6 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
 
     const double workerRateDivisor = static_cast<double>(totalWorkers);
 
-    // ── steady_clock 기반 epoch offset 사전 계산 ──────────────────
-    // system_clock::now() syscall을 루프 내에서 매번 호출하지 않도록
-    // 초기화 시 1회 계산한 offset으로 nowMs를 steady_clock에서 유도
     const int64_t epochOffsetMs = [&] {
         const auto sysNow    = std::chrono::system_clock::now();
         const auto steadyNow = std::chrono::steady_clock::now();
@@ -647,7 +631,6 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
 
         const double effectiveRate = ctx.rateCtrl.effectiveRate();
 
-        // ── 핵심 수정: steady_clock 1회 호출로 nowMs + rateStats 모두 처리 ──
         const auto     now   = std::chrono::steady_clock::now();
         const uint64_t nowMs = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -683,7 +666,7 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
                 if (ctx.devCounter) ctx.devCounter->fetch_add(sentCount, std::memory_order_relaxed);
                 m_totalSentCount.fetch_add(sentCount, std::memory_order_relaxed);
             }
-            updateRateStats(ctx, sentCount, now);  // now 재사용
+            updateRateStats(ctx, sentCount, now);
 
             std::this_thread::sleep_until(nextLoopTime);
         }
