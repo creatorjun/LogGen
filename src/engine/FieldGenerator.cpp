@@ -5,6 +5,8 @@
 #include <cstring>
 #include <ctime>
 #include <format>
+#include <sstream>
+#include <iomanip>
 
 FieldGenerator::FieldGenerator()
     : m_rng(std::random_device{}())
@@ -116,8 +118,6 @@ std::string_view FieldGenerator::generateRandomDstIp() const {
     return { m_dstIpBuf, m_dstIpLen };
 }
 
-// 2-arg 오버로드: 캐시된 범위와 일치하면 분포 재생성 없이 재사용,
-// 다른 범위일 때만 로컀 데지선 배포 객체 생성
 std::string FieldGenerator::generateRandomSrcIp(
     const std::string& startIp, const std::string& endIp) const
 {
@@ -249,10 +249,8 @@ std::string_view FieldGenerator::generateSeqNum() const {
 
 uint32_t FieldGenerator::generateRandomCount(uint32_t minVal, uint32_t maxVal) const {
     if (minVal > maxVal) std::swap(minVal, maxVal);
-    // buildBatch에서 사용하는 두 고정 범위는 캐시된 맴버 분포를 직접 호출
     if (minVal == 1u   && maxVal == 100u)   return m_distPktCnt(m_rng);
     if (minVal == 64u  && maxVal == 65535u) return m_distByteCnt(m_rng);
-    // 이외 임의 범위: 로컀 임시 분포 (hot path에서 호출되지 않음)
     std::uniform_int_distribution<uint32_t> d(minVal, maxVal);
     return d(m_rng);
 }
@@ -272,4 +270,103 @@ std::string FieldGenerator::generate(const std::string& key) const {
     if (key == "random_port") return std::to_string(generateRandomSrcPort());
     LOG_DEBUG("TEMPLATE", std::format("FieldGenerator::generate unknown key=[{}]", key));
     return std::format("?{}?", key);
+}
+
+std::string_view FieldGenerator::generateCity() const {
+    static constexpr std::array<std::string_view, 8> kTbl{
+        "Seoul", "Busan", "Incheon", "Daegu",
+        "Gwangju", "Daejeon", "Ulsan", "Suwon"
+    };
+    return pickFromTable(kTbl, m_distCity);
+}
+
+std::string_view FieldGenerator::generateEmail() const {
+    static constexpr std::array<std::string_view, 6> kTbl{
+        "admin@example.com", "user@company.co.kr", "guest@mail.net",
+        "root@internal", "service@example.org", "test@domain.com"
+    };
+    return pickFromTable(kTbl, m_distEmail);
+}
+
+std::string_view FieldGenerator::generateTrafficType() const {
+    static constexpr std::array<std::string_view, 4> kTbl{
+        "inbound", "outbound", "internal", "external"
+    };
+    return pickFromTable(kTbl, m_distTrafficType);
+}
+
+std::string_view FieldGenerator::generateVirusDivision() const {
+    static constexpr std::array<std::string_view, 4> kTbl{
+        "virus", "spyware", "ransomware", "trojan"
+    };
+    return pickFromTable(kTbl, m_distVirusDivision);
+}
+
+std::string_view FieldGenerator::generateInstCd1() const {
+    static constexpr std::array<std::string_view, 5> kTbl{
+        "INST001", "INST002", "INST003", "INST004", "INST005"
+    };
+    return pickFromTable(kTbl, m_distInstCd1);
+}
+
+std::string_view FieldGenerator::generatePayload() const {
+    static constexpr std::array<std::string_view, 5> kTbl{
+        "GET / HTTP/1.1",
+        "POST /api/login HTTP/1.1",
+        "\x00\x01\x02\x03\x04",
+        "EHLO mail.example.com",
+        "USER anonymous"
+    };
+    return pickFromTable(kTbl, m_distPayload);
+}
+
+std::string_view FieldGenerator::generateOriginalLog() const {
+    static constexpr std::array<std::string_view, 4> kTbl{
+        "<134>Jan 1 00:00:00 fw drop",
+        "<110>Jan 1 00:00:01 fw allow",
+        "<86>Jan 1 00:00:02 ids alert",
+        "<22>Jan 1 00:00:03 proxy request"
+    };
+    return pickFromTable(kTbl, m_distOriginalLog);
+}
+
+std::string_view FieldGenerator::generateExtField() const {
+    static constexpr std::array<std::string_view, 3> kTbl{
+        "", "extra1=val1", "extra2=val2"
+    };
+    return pickFromTable(kTbl, m_distExtField);
+}
+
+std::string FieldGenerator::generateBlackSha1() const {
+    static constexpr char kHex[] = "0123456789abcdef";
+    std::string sha1;
+    sha1.resize(40);
+    std::uniform_int_distribution<int> dist(0, 15);
+    for (char& c : sha1)
+        c = kHex[dist(m_rng)];
+    return sha1;
+}
+
+std::string FieldGenerator::generateIpLong(const std::string& ip) const {
+    const uint32_t val = ipToUint(ip);
+    return std::to_string(val);
+}
+
+std::string_view FieldGenerator::generateLatitude() const {
+    static constexpr std::array<std::string_view, 6> kTbl{
+        "37.5665", "35.1796", "37.4563", "35.8714", "36.3504", "37.2750"
+    };
+    return pickFromTable(kTbl, m_distLatitude);
+}
+
+std::string_view FieldGenerator::generateRebuildDt() const {
+    refreshTimestamp();
+    return { m_dateBuf, m_dateLen };
+}
+
+std::string_view FieldGenerator::generateRegiNo() const {
+    static constexpr std::array<std::string_view, 5> kTbl{
+        "REG00001", "REG00002", "REG00003", "REG00004", "REG00005"
+    };
+    return pickFromTable(kTbl, m_distRegiNo);
 }

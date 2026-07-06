@@ -38,9 +38,23 @@ public:
     [[nodiscard]] std::string_view generateHttpHost()    const;
     [[nodiscard]] std::string_view generateSeqNum()      const;
 
+    [[nodiscard]] std::string_view generateCity()         const;
+    [[nodiscard]] std::string_view generateEmail()        const;
+    [[nodiscard]] std::string_view generateTrafficType()  const;
+    [[nodiscard]] std::string_view generateVirusDivision() const;
+    [[nodiscard]] std::string_view generateInstCd1()      const;
+    [[nodiscard]] std::string_view generatePayload()      const;
+    [[nodiscard]] std::string_view generateOriginalLog()  const;
+    [[nodiscard]] std::string_view generateExtField()     const;
+    [[nodiscard]] std::string      generateBlackSha1()    const;
+    [[nodiscard]] std::string      generateIpLong(const std::string& ip) const;
+    [[nodiscard]] std::string_view generateLatitude()     const;
+    [[nodiscard]] std::string_view generateRebuildDt()    const;
+    [[nodiscard]] std::string_view generateRegiNo()       const;
+    [[nodiscard]] uint32_t generateRandomCount(uint32_t minVal, uint32_t maxVal) const;
+
     [[nodiscard]] uint16_t generateRandomSrcPort() const;
     [[nodiscard]] uint16_t generateRandomPort(const std::vector<uint16_t>& ports) const;
-    [[nodiscard]] uint32_t generateRandomCount(uint32_t minVal, uint32_t maxVal) const;
 
     [[nodiscard]] std::string generateRandomSrcIp(const std::string& startIp,
                                                   const std::string& endIp) const;
@@ -77,6 +91,18 @@ private:
     mutable std::uniform_int_distribution<int>      m_distUri{ 0, 9 };
     mutable std::uniform_int_distribution<int>      m_distHost{ 0, 4 };
     mutable std::uniform_int_distribution<int>      m_distAction{ 1, 100 };
+    mutable std::uniform_int_distribution<int>      m_distCity{ 0, 7 };
+    mutable std::uniform_int_distribution<int>      m_distEmail{ 0, 5 };
+    mutable std::uniform_int_distribution<int>      m_distTrafficType{ 0, 3 };
+    mutable std::uniform_int_distribution<int>      m_distVirusDivision{ 0, 3 };
+    mutable std::uniform_int_distribution<int>      m_distInstCd1{ 0, 4 };
+    mutable std::uniform_int_distribution<int>      m_distPayload{ 0, 4 };
+    mutable std::uniform_int_distribution<int>      m_distOriginalLog{ 0, 3 };
+    mutable std::uniform_int_distribution<int>      m_distExtField{ 0, 2 };
+    mutable std::uniform_int_distribution<int>      m_distLatitude{ 0, 5 };
+    mutable std::uniform_int_distribution<int>      m_distRegiNo{ 0, 4 };
+    mutable std::uniform_int_distribution<uint32_t> m_distFileSize{ 1024u, 10485760u };
+    mutable std::uniform_int_distribution<uint32_t> m_distOutPkt{ 1u, 200u };
 
     mutable uint32_t m_cachedIpStart = 0;
     mutable uint32_t m_cachedIpEnd   = 0;
@@ -88,15 +114,12 @@ private:
     mutable std::uniform_int_distribution<uint32_t> m_distCachedDstIp;
     mutable bool     m_hasCachedDstIpRange = false;
 
-    // generateRandomCount 캐시: buildBatch에서 사용하는 두 고정 범위 [1,100], [64,65535]
     mutable std::uniform_int_distribution<uint32_t> m_distPktCnt{ 1u, 100u };
     mutable std::uniform_int_distribution<uint32_t> m_distByteCnt{ 64u, 65535u };
 
-    // generateRandomPort 캐시: 포트 목록 크기가 바뀌었을 때만 param() 재설정
     mutable std::uniform_int_distribution<size_t> m_distDstPort{ 0, 0 };
     mutable size_t                                m_lastDstPortCount = 0;
 
-    // pickIndex 캐시: count가 바뀌었을 때만 param() 재설정
     mutable std::uniform_int_distribution<size_t> m_distPickIndex{ 0, 0 };
     mutable size_t                                m_lastPickCount = 0;
 
@@ -119,6 +142,15 @@ private:
     mutable size_t m_connIdLen       = 0;
     mutable char   m_pidBuf[8]       = {};
     mutable size_t m_pidLen          = 0;
+
+    mutable char   m_fileSizeBuf[16] = {};
+    mutable size_t m_fileSizeLen     = 0;
+    mutable char   m_outPktBuf[8]    = {};
+    mutable size_t m_outPktLen       = 0;
+    mutable char   m_latBuf[12]      = {};
+    mutable size_t m_latLen          = 0;
+    mutable char   m_regiNoBuf[12]   = {};
+    mutable size_t m_regiNoLen       = 0;
 
     mutable std::atomic<uint64_t> m_seqCounter{ 1 };
     mutable char                  m_seqBuf[24] = {};
