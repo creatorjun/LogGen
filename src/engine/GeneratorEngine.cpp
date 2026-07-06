@@ -235,7 +235,7 @@ GeneratorEngine::refreshProfile(WorkerContext& ctx) {
         ctx.fieldGen.cacheIpRange(ctx.profile.event.srcIpStart, ctx.profile.event.srcIpEnd);
     if (ctx.profile.event.dstIpRandom)
         ctx.fieldGen.cacheDstIpRange(ctx.profile.event.dstIpStart, ctx.profile.event.dstIpEnd);
-    ctx.scenarioSelector.updateScenarios(ctx.profile.event.scenarios);
+    ctx.scenarioSelector.updateScenarios(ctx.profile.event.scenarios, ctx.templateEngine);
 
     return collectorChanged ? RefreshState::kConnectionChanged : RefreshState::kUpdated;
 }
@@ -264,8 +264,23 @@ void GeneratorEngine::buildBatch(
         entry.deviceName  = devName;
         entry.timestampMs = nowMs;
 
-        if (scenario.isCustom) {
-            entry.rawLog.assign(scenario.customLog.data(), scenario.customLog.size());
+        if (scenario.isCustom && scenario.compiledCustomLog) {
+            // Generate dynamic fields so tokens like $TIMESTAMP, $SRC_IP are fresh
+            if (r.timestamp)    assignSV(*r.timestamp,    ctx.fieldGen.generateTimestamp());
+            if (r.date)         assignSV(*r.date,         ctx.fieldGen.generateDate());
+            if (r.time)         assignSV(*r.time,         ctx.fieldGen.generateTime());
+            if (r.attackSeqNum) assignSV(*r.attackSeqNum, ctx.fieldGen.generateSeqNum());
+            if (srcIpRandom && r.srcIp)
+                                assignSV(*r.srcIp,        ctx.fieldGen.generateRandomSrcIp());
+            if (dstIpRandom && r.dstIp)
+                                assignSV(*r.dstIp,        ctx.fieldGen.generateRandomDstIp());
+            if (r.srcPort)  assignSV(*r.srcPort,  u32ToSV(ctx.fieldGen.generateRandomSrcPort(),      ctx.srcPortBuf, 8));
+            if (r.dstPort)  assignSV(*r.dstPort,  u32ToSV(ctx.fieldGen.generateRandomPort(dstPorts), ctx.dstPortBuf, 8));
+            if (r.action)   assignSV(*r.action,   ctx.fieldGen.generateAction(allowPct));
+            if (r.attackName) assignSV(*r.attackName, scenario.attackName);
+            if (r.proto)    assignSV(*r.proto,    ctx.fieldGen.generateProto());
+
+            entry.rawLog = LogTemplateEngine::renderCompiled(*scenario.compiledCustomLog, ctx.tokens);
             ctx.sendBuf.push_back(entry.rawLog);
             ctx.dispatchBuf.push_back(std::move(entry));
             continue;
@@ -584,7 +599,7 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
     if (ctx.profile.event.dstIpRandom)
         ctx.fieldGen.cacheDstIpRange(ctx.profile.event.dstIpStart, ctx.profile.event.dstIpEnd);
 
-    ctx.scenarioSelector.updateScenarios(ctx.profile.event.scenarios);
+    ctx.scenarioSelector.updateScenarios(ctx.profile.event.scenarios, ctx.templateEngine);
     ctx.lastRateCalcTime = std::chrono::steady_clock::now();
 
     ctx.tokens["EQP_IP"]          = ctx.profile.eqpIp;
