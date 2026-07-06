@@ -51,7 +51,6 @@ DefaultProfileFactory::buildFromDirectory(const std::string& dirPath) {
                 continue;
             }
 
-            // format.type 서로 포맷 종류를 읽는다. 없으면 PLAIN
             const std::string fmtType = root["format"].value("type", std::string("PLAIN"));
             format    = LogFormatUtils::fromString(fmtType);
             formatRaw = root["format"]["raw"].get<std::string>();
@@ -64,6 +63,17 @@ DefaultProfileFactory::buildFromDirectory(const std::string& dirPath) {
                     EventScenario es;
                     es.attackName = s.value("attackName", std::string("Normal_Traffic"));
                     es.weight     = s.value("weight", 10);
+                    scenarios.push_back(std::move(es));
+                }
+            }
+
+            if (root.contains("custom") && root["custom"].is_array()) {
+                for (const auto& entry : root["custom"]) {
+                    if (!entry.is_string()) continue;
+                    EventScenario es;
+                    es.attackName = "Custom";
+                    es.weight     = 0;
+                    es.customLog  = entry.get<std::string>();
                     scenarios.push_back(std::move(es));
                 }
             }
