@@ -35,7 +35,8 @@ struct SchedulerConfig {
 
 struct EventScenario {
     std::string attackName;
-    int         weight = 10;
+    int         weight    = 10;
+    std::string customLog;
 };
 
 struct EventConfig {
