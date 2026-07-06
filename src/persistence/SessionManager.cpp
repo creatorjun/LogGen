@@ -72,6 +72,7 @@ bool SessionManager::loadSession(std::vector<DeviceProfile>& profiles) {
                         EventScenario es;
                         es.attackName = s.value("attackName", std::string("Normal_Traffic"));
                         es.weight     = s.value("weight", 10);
+                        es.customLog  = s.value("customLog", std::string(""));
                         p.event.scenarios.push_back(std::move(es));
                     }
                 }
@@ -107,10 +108,13 @@ bool SessionManager::saveSession(const std::vector<DeviceProfile>& profiles) {
         for (const auto& p : profiles) {
             json scenariosArr = json::array();
             for (const auto& s : p.event.scenarios) {
-                scenariosArr.push_back({
+                json sObj = {
                     {"attackName", s.attackName},
                     {"weight",     s.weight}
-                });
+                };
+                if (!s.customLog.empty())
+                    sObj["customLog"] = s.customLog;
+                scenariosArr.push_back(std::move(sObj));
             }
 
             root.push_back({
