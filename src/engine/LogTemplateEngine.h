@@ -36,14 +36,15 @@ public:
     [[nodiscard]] static std::vector<LogTemplate> loadFromDirectory(const std::string& dirPath);
     [[nodiscard]] static std::string              render(const LogTemplate& tmpl, const FieldGenerator& gen);
 
+    // Public so external components (e.g. ScenarioSelector) can pre-compile arbitrary strings
+    [[nodiscard]] static CompiledLine compileLine(const std::string& tpl);
+    [[nodiscard]] static std::string  renderCompiled(
+        const CompiledLine& cl,
+        const std::flat_map<std::string, std::string>& tokens);
+
 private:
     std::vector<CompiledLine> m_compiled;
     std::string               m_rawFormat;
     std::vector<std::string>  m_lines;
     mutable std::mt19937      m_rng;
-
-    [[nodiscard]] static CompiledLine compileLine(const std::string& tpl);
-    [[nodiscard]] static std::string  renderCompiled(
-        const CompiledLine& cl,
-        const std::flat_map<std::string, std::string>& tokens);
 };
