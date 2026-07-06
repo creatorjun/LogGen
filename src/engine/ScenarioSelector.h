@@ -6,11 +6,12 @@
 #include <string>
 #include <string_view>
 #include "core/DeviceProfile.h"
+#include "engine/LogTemplateEngine.h"
 
 struct ScenarioResult {
-    std::string_view attackName;
-    std::string_view customLog;
-    bool             isCustom = false;
+    std::string_view         attackName;
+    const CompiledLine*      compiledCustomLog = nullptr;
+    bool                     isCustom          = false;
 };
 
 class ScenarioSelector {
@@ -19,18 +20,22 @@ public:
         : m_rng(std::random_device{}())
     {}
 
-    void updateScenarios(const std::vector<EventScenario>& scenarios) {
+    void updateScenarios(const std::vector<EventScenario>& scenarios,
+                         LogTemplateEngine&                engine) {
         m_scenarios = scenarios;
         m_customIndex = 0;
 
         m_customScenarios.clear();
         m_weightScenarios.clear();
+        m_compiledCustomLogs.clear();
 
         for (const auto& s : m_scenarios) {
-            if (!s.customLog.empty())
+            if (!s.customLog.empty()) {
+                m_compiledCustomLogs.push_back(engine.compileLine(s.customLog));
                 m_customScenarios.push_back(&s);
-            else
+            } else {
                 m_weightScenarios.push_back(&s);
+            }
         }
 
         std::vector<double> weights;
@@ -44,15 +49,19 @@ public:
 
     [[nodiscard]] ScenarioResult select() const {
         if (!m_customScenarios.empty()) {
-            const auto* s = m_customScenarios[m_customIndex % m_customScenarios.size()];
+            const size_t i = m_customIndex % m_customScenarios.size();
             ++m_customIndex;
-            return ScenarioResult{ s->attackName, s->customLog, true };
+            return ScenarioResult{
+                m_customScenarios[i]->attackName,
+                &m_compiledCustomLogs[i],
+                true
+            };
         }
         if (m_weightScenarios.empty())
-            return ScenarioResult{ "Normal_Traffic", {}, false };
+            return ScenarioResult{ "Normal_Traffic", nullptr, false };
         const size_t idx = m_distribution(m_rng);
         const auto* s = m_weightScenarios[idx < m_weightScenarios.size() ? idx : 0];
-        return ScenarioResult{ s->attackName, {}, false };
+        return ScenarioResult{ s->attackName, nullptr, false };
     }
 
     [[nodiscard]] std::string_view selectAttackScenario() const {
@@ -63,6 +72,7 @@ private:
     std::vector<EventScenario>         m_scenarios;
     std::vector<const EventScenario*>  m_customScenarios;
     std::vector<const EventScenario*>  m_weightScenarios;
+    std::vector<CompiledLine>          m_compiledCustomLogs;
     mutable size_t                     m_customIndex{};
     mutable std::mt19937               m_rng;
     mutable std::discrete_distribution<size_t> m_distribution;
