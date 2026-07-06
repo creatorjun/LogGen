@@ -3,13 +3,13 @@
   "vendor": "LogGen",
   "format": {
     "type": "PLAIN",
-    "raw": "{TIMESTAMP} {EQP_IP} NOTICE attack={ATTACK_NAME} src={SRC_IP} dst={DST_IP} action={ACTION}"
+    "raw": "$TIMESTAMP $EQP_IP NOTICE attack=$ATTACK_NAME src=$SRC_IP dst=$DST_IP action=$ACTION"
   },
   "custom": [
-    "Jan  1 00:00:01 192.168.0.1 NOTICE attack=SQL_Injection src=10.0.0.1 dst=192.168.1.1 action=DENY",
-    "Jan  1 00:00:02 192.168.0.1 NOTICE attack=XSS src=10.0.0.2 dst=192.168.1.2 action=DENY",
-    "Jan  1 00:00:03 192.168.0.1 NOTICE attack=Port_Scan src=10.0.0.3 dst=192.168.1.3 action=ALERT",
-    "Jan  1 00:00:04 192.168.0.1 NOTICE attack=Brute_Force src=10.0.0.4 dst=192.168.1.4 action=BLOCK",
-    "Jan  1 00:00:05 192.168.0.1 NOTICE attack=Normal_Traffic src=10.0.0.5 dst=192.168.1.5 action=ALLOW"
+    "$TIMESTAMP $EQP_IP NOTICE attack=SQL_Injection src=$SRC_IP dst=$DST_IP action=DENY",
+    "$TIMESTAMP $EQP_IP NOTICE attack=XSS src=$SRC_IP dst=$DST_IP action=DENY",
+    "$TIMESTAMP $EQP_IP NOTICE attack=Port_Scan src=$SRC_IP dst=$DST_IP action=ALERT",
+    "$TIMESTAMP $EQP_IP NOTICE attack=Brute_Force src=$SRC_IP dst=$DST_IP action=BLOCK",
+    "$TIMESTAMP $EQP_IP NOTICE attack=Normal_Traffic src=$SRC_IP dst=$DST_IP action=ALLOW"
   ]
 }
