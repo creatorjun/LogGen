@@ -18,7 +18,6 @@
 #include "engine/LogDispatchQueue.h"
 #include "engine/TIPool.h"
 #include "engine/WorkerContext.h"
-#include "engine/WorkerAllocationStrategy.h"
 #include "core/Constants.h"
 
 class GeneratorEngine : public IGeneratorEngine {
@@ -64,7 +63,6 @@ private:
     [[nodiscard]] uint64_t
         sendAndDispatch(WorkerContext& ctx, size_t batchSize);
 
-    // now를 인자로 받아 루프 내 steady_clock::now() 중복 호출 제거
     void updateRateStats(WorkerContext& ctx,
                          uint64_t      sentCount,
                          std::chrono::steady_clock::time_point now);
