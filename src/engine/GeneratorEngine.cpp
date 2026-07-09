@@ -11,7 +11,6 @@
 
 #include "GeneratorEngine.h"
 #include "ConnectionManager.h"
-#include "WorkerAllocationStrategy.h"
 #include "ThreadPool.h"
 #include "UDPSender.h"
 #include "TCPSender.h"
@@ -464,4 +463,360 @@ void GeneratorEngine::updateRateStats(WorkerContext& ctx,
     }
 }
 
-bool Generator
+bool GeneratorEngine::runTokenBatchPath(
+        WorkerContext& ctx,
+        size_t         maxBatch,
+        uint64_t       nowMs,
+        std::chrono::steady_clock::time_point now,
+        bool           isFastPath) {
+
+    const size_t batchSize = ctx.rateCtrl.tick(maxBatch);
+
+    if (batchSize == 0) {
+        if (isFastPath) {
+            auto refreshRes = refreshProfile(ctx);
+            if (!refreshRes) return false;
+            std::this_thread::yield();
+        } else {
+            const double rate    = ctx.rateCtrl.effectiveRate();
+            const double waitSec = 1.0 / (rate > 0.0 ? rate : 1.0);
+            std::this_thread::sleep_for(
+                std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                    std::chrono::duration<double>(waitSec)));
+        }
+        return true;
+    }
+
+    auto refreshRes = refreshProfile(ctx);
+    if (!refreshRes) return false;
+
+    buildBatch(ctx, batchSize, nowMs);
+
+    const uint64_t sentCount = sendAndDispatch(ctx, batchSize);
+
+    ctx.rateCtrl.consume(sentCount);
+
+    if (sentCount > 0) {
+        if (ctx.devCounter) ctx.devCounter->fetch_add(sentCount, std::memory_order_relaxed);
+        m_totalSentCount.fetch_add(sentCount, std::memory_order_relaxed);
+    }
+    updateRateStats(ctx, sentCount, now);
+    return true;
+}
+
+void GeneratorEngine::spawnWorkers(const std::string& profileId, int count) {
+    m_profileWorkerCount[profileId] = count;
+    for (int i = 0; i < count; ++i) {
+        m_activeWorkers.insert(workerKey(profileId, i));
+        m_threadPool->enqueue([this, id = profileId, idx = i, cnt = count]() {
+            workerLoop(id, idx, cnt);
+        });
+    }
+}
+
+void GeneratorEngine::start(const std::vector<DeviceProfile>& profiles) {
+    stop();
+    LOG_INFO("ENGINE", std::format("Engine start requested. profiles={}", profiles.size()));
+
+    std::vector<std::reference_wrapper<const DeviceProfile>> enabled;
+    for (const auto& p : profiles)
+        if (p.enabled) enabled.emplace_back(p);
+
+    const int activeCount = static_cast<int>(enabled.size());
+
+    std::vector<int> workerCounts(activeCount, 1);
+    const int remaining = m_poolSize - activeCount;
+    if (remaining > 0 && activeCount > 0) {
+        std::vector<double> eps(activeCount);
+        for (int i = 0; i < activeCount; ++i) {
+            const double v = static_cast<double>(
+                enabled[i].get().scheduler.normalRateToEps());
+            eps[i] = (v > 1.0) ? v : 1.0;
+        }
+
+        double totalEps = 0.0;
+        for (int i = 0; i < activeCount; ++i) totalEps += eps[i];
+
+        std::vector<double> share(activeCount);
+        for (int i = 0; i < activeCount; ++i)
+            share[i] = (eps[i] / totalEps) * static_cast<double>(remaining);
+
+        for (int i = 0; i < activeCount; ++i)
+            workerCounts[i] += static_cast<int>(share[i]);
+
+        int allocated = 0;
+        for (int i = 0; i < activeCount; ++i) allocated += workerCounts[i];
+        int leftover = (m_poolSize - allocated);
+        if (leftover > 0) {
+            std::vector<std::pair<double, int>> rem;
+            rem.reserve(activeCount);
+            for (int i = 0; i < activeCount; ++i)
+                rem.emplace_back(share[i] - std::floor(share[i]), i);
+            std::sort(rem.begin(), rem.end(),
+                [](const std::pair<double,int>& a, const std::pair<double,int>& b){
+                    return a.first > b.first;
+                });
+            for (int k = 0; k < leftover && k < activeCount; ++k)
+                ++workerCounts[rem[k].second];
+        }
+    }
+
+    {
+        std::unique_lock lock(m_statsMutex);
+        m_profileMap.clear();
+        m_activeWorkers.clear();
+        m_profileWorkerCount.clear();
+        m_totalSentCount.store(0, std::memory_order_relaxed);
+
+        for (const auto& p : profiles) {
+            m_profileMap[p.id] = p;
+            auto cit = m_deviceCounters.find(p.id);
+            if (cit == m_deviceCounters.end()) {
+                m_deviceCounters[p.id]   = std::make_unique<std::atomic<uint64_t>>(0);
+                m_deviceRatesFixed[p.id] = std::make_unique<std::atomic<uint32_t>>(0);
+            } else {
+                cit->second->store(0, std::memory_order_relaxed);
+                m_deviceRatesFixed[p.id]->store(0, std::memory_order_relaxed);
+            }
+        }
+        m_profileVersion.fetch_add(1, std::memory_order_release);
+    }
+
+    m_running.store(true, std::memory_order_seq_cst);
+    m_dispatcherThread = std::thread(&GeneratorEngine::dispatcherLoop, this);
+    m_threadPool       = std::make_unique<ThreadPool>(m_poolSize);
+
+    {
+        std::unique_lock lock(m_statsMutex);
+        for (int i = 0; i < activeCount; ++i) {
+            const std::string& id  = enabled[i].get().id;
+            const int          cnt = workerCounts[i];
+            LOG_INFO("ENGINE", std::format(
+                "Worker started for profileId={}, device={} (workers={})",
+                id, enabled[i].get().deviceName, cnt));
+            spawnWorkers(id, cnt);
+        }
+    }
+    LOG_INFO("ENGINE", std::format("Engine started. threadPoolSize={}", m_poolSize));
+}
+
+void GeneratorEngine::stop() {
+    if (!m_running.load(std::memory_order_acquire)) return;
+    LOG_INFO("ENGINE", "Engine stop requested");
+    m_running.store(false, std::memory_order_release);
+    m_running.notify_all();
+    m_threadPool.reset();
+    m_dispatchQueue.wakeAll();
+    if (m_dispatcherThread.joinable())
+        m_dispatcherThread.join();
+    LOG_INFO("ENGINE", "Engine stopped cleanly");
+}
+
+void GeneratorEngine::updateProfile(const DeviceProfile& profile) {
+    bool spawnWorker = false;
+    {
+        std::unique_lock lock(m_statsMutex);
+        auto it = m_profileMap.find(profile.id);
+        if (it != m_profileMap.end()) {
+            const bool wasEnabled = it->second.enabled;
+            it->second = profile;
+            m_profileVersion.fetch_add(1, std::memory_order_release);
+            LOG_DEBUG("ENGINE", std::format("Profile updated: id={}, name={}",
+                profile.id, profile.deviceName));
+
+            if (!wasEnabled && profile.enabled &&
+                !m_activeWorkers.contains(workerKey(profile.id, 0))) {
+                m_activeWorkers.insert(workerKey(profile.id, 0));
+                spawnWorker = true;
+            }
+        }
+    }
+
+    if (spawnWorker && m_threadPool && m_running.load(std::memory_order_acquire)) {
+        LOG_INFO("ENGINE", std::format("Spawning new worker for device: id={}, name={}",
+            profile.id, profile.deviceName));
+        m_threadPool->enqueue([this, id = profile.id]() { workerLoop(id, 0, 1); });
+    }
+}
+
+void GeneratorEngine::dispatcherLoop() {
+    std::vector<LogEntry> batch;
+    batch.reserve(Constants::Engine::kBatchSize * 2);
+    LOG_INFO("ENGINE", "Dispatcher thread started");
+    while (true) {
+        const size_t n = m_dispatchQueue.drain(batch, m_running);
+        for (size_t i = 0; i < n; ++i) {
+            if (m_callback) m_callback(std::move(batch[i]));
+        }
+        if (!m_running.load(std::memory_order_relaxed) && m_dispatchQueue.empty())
+            break;
+    }
+    LOG_INFO("ENGINE", "Dispatcher thread stopped");
+}
+
+void GeneratorEngine::workerLoop(const std::string& profileId,
+                                  int workerIndex,
+                                  int totalWorkers) {
+    const std::string wKey = workerKey(profileId, workerIndex);
+
+    if (!m_running.load(std::memory_order_acquire)) {
+        std::unique_lock lock(m_statsMutex);
+        m_activeWorkers.erase(wKey);
+        return;
+    }
+
+    WorkerContext ctx;
+    ctx.profileId    = profileId;
+    ctx.workerIndex  = workerIndex;
+    ctx.totalWorkers = totalWorkers;
+
+    {
+        std::shared_lock lock(m_statsMutex);
+        auto it = m_profileMap.find(profileId);
+        if (it == m_profileMap.end()) return;
+        ctx.profile      = it->second;
+        ctx.knownVersion = m_profileVersion.load(std::memory_order_acquire);
+
+        if (auto cit = m_deviceCounters.find(profileId); cit != m_deviceCounters.end())
+            ctx.devCounter = cit->second.get();
+        if (auto rit = m_deviceRatesFixed.find(profileId); rit != m_deviceRatesFixed.end())
+            ctx.devRateFixed = rit->second.get();
+    }
+
+    LOG_INFO("ENGINE", std::format("Worker started for profileId={}, device={}",
+        profileId, ctx.profile.deviceName));
+
+    if (auto res = ctx.connMgr.connect(ctx.profile); !res) {
+        pushWorkerError(ctx.profile.id, ctx.profile.deviceName, res.error());
+        std::unique_lock lock(m_statsMutex);
+        m_activeWorkers.erase(wKey);
+        return;
+    }
+
+    if (!ctx.templateEngine.loadTemplate(ctx.profile.formatRaw)) {
+        pushWorkerError(ctx.profile.id, ctx.profile.deviceName,
+            std::format("Template load failed (formatRaw empty): {}", ctx.profile.deviceName));
+        std::unique_lock lock(m_statsMutex);
+        m_activeWorkers.erase(wKey);
+        return;
+    }
+
+    ctx.fieldGen.setDateOffsetDays(m_dateOffsetDays.load(std::memory_order_relaxed));
+    if (ctx.profile.event.srcIpRandom)
+        ctx.fieldGen.cacheIpRange(ctx.profile.event.srcIpStart, ctx.profile.event.srcIpEnd);
+    if (ctx.profile.event.dstIpRandom)
+        ctx.fieldGen.cacheDstIpRange(ctx.profile.event.dstIpStart, ctx.profile.event.dstIpEnd);
+
+    ctx.scenarioSelector.updateScenarios(ctx.profile.event.scenarios, ctx.templateEngine);
+    ctx.lastRateCalcTime = std::chrono::steady_clock::now();
+
+    ctx.tokens["EQP_IP"]          = ctx.profile.eqpIp;
+    ctx.tokens["TI_COUNTRY"]      = "UNKNOWN";
+    ctx.tokens["TI_COUNTRY_CODE"] = "ZZ";
+    ctx.tokens["TI_DESCRIPTION"]  = "N/A";
+    ctx.tokens["TI_SOURCE"]       = "LOCAL";
+    if (!ctx.profile.event.srcIpRandom) ctx.tokens["SRC_IP"] = ctx.profile.event.srcIp;
+    if (!ctx.profile.event.dstIpRandom) ctx.tokens["DST_IP"] = ctx.profile.event.dstIpFixed;
+    ensureTokenKeys(ctx.tokens);
+
+    ctx.sendBuf.reserve(Constants::Engine::kFastBatchSize);
+    ctx.dispatchBuf.reserve(Constants::Engine::kFastBatchSize);
+
+    const double workerRateDivisor = static_cast<double>(totalWorkers);
+
+    const int64_t epochOffsetMs = [&] {
+        const auto sysNow    = std::chrono::system_clock::now();
+        const auto steadyNow = std::chrono::steady_clock::now();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+                   sysNow.time_since_epoch()).count()
+             - std::chrono::duration_cast<std::chrono::milliseconds>(
+                   steadyNow.time_since_epoch()).count();
+    }();
+
+    while (m_running.load(std::memory_order_relaxed)) {
+        if (!ctx.profile.enabled) {
+            m_running.wait(true, std::memory_order_relaxed);
+            if (!m_running.load(std::memory_order_relaxed)) break;
+            auto refreshRes = refreshProfile(ctx);
+            if (!refreshRes) break;
+            continue;
+        }
+
+        const double normalEps = static_cast<double>(ctx.profile.scheduler.normalRateToEps());
+        const double burstEps  = static_cast<double>(ctx.profile.scheduler.burstRateToEps());
+
+        ctx.rateCtrl.update(
+            ctx.profile.scheduler.burstEnable,
+            ctx.profile.scheduler.burstIntervalSec,
+            ctx.profile.scheduler.burstDurationSec,
+            normalEps / workerRateDivisor,
+            burstEps  / workerRateDivisor);
+
+        const double effectiveRate = ctx.rateCtrl.effectiveRate();
+
+        const auto     now   = std::chrono::steady_clock::now();
+        const uint64_t nowMs = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                now.time_since_epoch()).count() + epochOffsetMs);
+
+        ctx.sendBuf.clear();
+        ctx.dispatchBuf.clear();
+
+        if (effectiveRate >= Constants::Engine::kFastPathThreshold) {
+            if (!runTokenBatchPath(ctx, Constants::Engine::kFastBatchSize, nowMs, now, true))
+                break;
+
+        } else if (effectiveRate >= Constants::Engine::kMidPathThreshold) {
+            if (!runTokenBatchPath(ctx, Constants::Engine::kBatchSize, nowMs, now, false))
+                break;
+
+        } else {
+            const size_t currentBatchSize = (effectiveRate < 60.0) ? 1
+                                          : Constants::Engine::kBatchSize;
+            const double batchIntervalSec = static_cast<double>(currentBatchSize) / effectiveRate;
+            const auto   nextLoopTime     = now + std::chrono::duration_cast<
+                std::chrono::steady_clock::duration>(
+                    std::chrono::duration<double>(batchIntervalSec));
+
+            auto refreshRes = refreshProfile(ctx);
+            if (!refreshRes) break;
+
+            buildBatch(ctx, currentBatchSize, nowMs);
+
+            const uint64_t sentCount = sendAndDispatch(ctx, currentBatchSize);
+
+            if (sentCount > 0) {
+                if (ctx.devCounter) ctx.devCounter->fetch_add(sentCount, std::memory_order_relaxed);
+                m_totalSentCount.fetch_add(sentCount, std::memory_order_relaxed);
+            }
+            updateRateStats(ctx, sentCount, now);
+
+            std::this_thread::sleep_until(nextLoopTime);
+        }
+    }
+
+    {
+        std::unique_lock lock(m_statsMutex);
+        m_activeWorkers.erase(wKey);
+    }
+    LOG_INFO("ENGINE", std::format("Worker stopped for profileId={}, device={}",
+        profileId, ctx.profile.deviceName));
+}
+
+uint64_t GeneratorEngine::getTotalSent() const {
+    return m_totalSentCount.load(std::memory_order_relaxed);
+}
+
+uint64_t GeneratorEngine::getSentByDevice(const std::string& deviceId) const {
+    std::shared_lock lock(m_statsMutex);
+    auto it = m_deviceCounters.find(deviceId);
+    return (it != m_deviceCounters.end()) ? it->second->load(std::memory_order_relaxed) : 0;
+}
+
+float GeneratorEngine::getCurrentRateByDevice(const std::string& deviceId) const {
+    std::shared_lock lock(m_statsMutex);
+    auto it = m_deviceRatesFixed.find(deviceId);
+    return (it != m_deviceRatesFixed.end())
+        ? fixedToFloat(it->second->load(std::memory_order_relaxed))
+        : 0.0f;
+}
