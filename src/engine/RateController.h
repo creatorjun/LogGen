@@ -19,6 +19,11 @@ public:
     [[nodiscard]] size_t tick(size_t maxBatch) noexcept;
     void consume(size_t sent) noexcept;
 
+    void resetLastTickTime() noexcept {
+        m_lastTickTime = std::chrono::steady_clock::now();
+        m_bucket       = 0.0;
+    }
+
 private:
     double  m_rate{1.0};
     double  m_bucket{};
