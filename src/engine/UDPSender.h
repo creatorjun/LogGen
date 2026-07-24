@@ -17,7 +17,9 @@
   #include <arpa/inet.h>
   #include <unistd.h>
   #include <sys/uio.h>
+  #ifdef __linux__
   #include <linux/errqueue.h>
+  #endif
   using UdpSocket = int;
   static constexpr UdpSocket kInvalidUdpSocket = -1;
 #endif
@@ -45,7 +47,9 @@ private:
 #ifdef _WIN32
     WSABUF   m_wsaBufs[kBatchCapacity];
 #else
-    iovec    m_iovecs[kBatchCapacity];
-    mmsghdr  m_mmsgHdrs[kBatchCapacity];
+    iovec       m_iovecs[kBatchCapacity];
+#  ifdef __linux__
+    mmsghdr     m_mmsgHdrs[kBatchCapacity];
+#  endif
 #endif
 };

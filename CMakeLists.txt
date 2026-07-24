@@ -74,11 +74,13 @@ else()
         -Wextra
         -Wpedantic
         -Werror
-        # std::hardware_destructive_interference_size 사용에 의한
-        # -Winterference-size 경고 억제
-        # (GCC 12+ 에서 만 발생, Clang 에서는 무시됨)
-        -Wno-interference-size
+        -Wno-unused-private-field
     )
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(SIMLogGenerator_Warnings INTERFACE
+            -Wno-interference-size
+        )
+    endif()
 endif()
 
 # 경고 타겟을 메인 프로젝트에 링크

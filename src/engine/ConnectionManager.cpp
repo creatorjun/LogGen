@@ -8,8 +8,8 @@
 std::expected<void, std::string>
 ConnectionManager::connect(const DeviceProfile& p) {
     m_sender = p.collector.useTCP
-        ? std::unique_ptr<ISender>(std::make_unique<TCPSender>())
-        : std::unique_ptr<ISender>(std::make_unique<UDPSender>());
+        ? static_cast<std::unique_ptr<ISender>>(std::make_unique<TCPSender>())
+        : static_cast<std::unique_ptr<ISender>>(std::make_unique<UDPSender>());
 
     m_udpSender = p.collector.useTCP
         ? nullptr

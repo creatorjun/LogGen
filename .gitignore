@@ -2,5 +2,6 @@
 /config
 /build
 /vcpkg
+/vcpkg_installed
 .vscode
 *.ini

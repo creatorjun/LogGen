@@ -143,14 +143,6 @@ private:
     mutable char   m_pidBuf[8]       = {};
     mutable size_t m_pidLen          = 0;
 
-    mutable char   m_fileSizeBuf[16] = {};
-    mutable size_t m_fileSizeLen     = 0;
-    mutable char   m_outPktBuf[8]    = {};
-    mutable size_t m_outPktLen       = 0;
-    mutable char   m_latBuf[12]      = {};
-    mutable size_t m_latLen          = 0;
-    mutable char   m_regiNoBuf[12]   = {};
-    mutable size_t m_regiNoLen       = 0;
 
     mutable std::atomic<uint64_t> m_seqCounter{ 1 };
     mutable char                  m_seqBuf[24] = {};
