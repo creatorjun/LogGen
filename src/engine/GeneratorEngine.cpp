@@ -525,41 +525,6 @@ void GeneratorEngine::start(const std::vector<DeviceProfile>& profiles) {
     const int activeCount = static_cast<int>(enabled.size());
 
     std::vector<int> workerCounts(activeCount, 1);
-    const int remaining = m_poolSize - activeCount;
-    if (remaining > 0 && activeCount > 0) {
-        std::vector<double> eps(activeCount);
-        for (int i = 0; i < activeCount; ++i) {
-            const double v = static_cast<double>(
-                enabled[i].get().scheduler.normalRateToEps());
-            eps[i] = (v > 1.0) ? v : 1.0;
-        }
-
-        double totalEps = 0.0;
-        for (int i = 0; i < activeCount; ++i) totalEps += eps[i];
-
-        std::vector<double> share(activeCount);
-        for (int i = 0; i < activeCount; ++i)
-            share[i] = (eps[i] / totalEps) * static_cast<double>(remaining);
-
-        for (int i = 0; i < activeCount; ++i)
-            workerCounts[i] += static_cast<int>(share[i]);
-
-        int allocated = 0;
-        for (int i = 0; i < activeCount; ++i) allocated += workerCounts[i];
-        int leftover = (m_poolSize - allocated);
-        if (leftover > 0) {
-            std::vector<std::pair<double, int>> rem;
-            rem.reserve(activeCount);
-            for (int i = 0; i < activeCount; ++i)
-                rem.emplace_back(share[i] - std::floor(share[i]), i);
-            std::sort(rem.begin(), rem.end(),
-                [](const std::pair<double,int>& a, const std::pair<double,int>& b){
-                    return a.first > b.first;
-                });
-            for (int k = 0; k < leftover && k < activeCount; ++k)
-                ++workerCounts[rem[k].second];
-        }
-    }
 
     {
         std::unique_lock lock(m_statsMutex);
@@ -721,6 +686,8 @@ void GeneratorEngine::workerLoop(const std::string& profileId,
 
     ctx.sendBuf.reserve(Constants::Engine::kFastBatchSize);
     ctx.dispatchBuf.reserve(Constants::Engine::kFastBatchSize);
+
+    ctx.rateCtrl.resetLastTickTime();
 
     const double workerRateDivisor = static_cast<double>(totalWorkers);
 
