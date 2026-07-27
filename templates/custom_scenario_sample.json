@@ -1,6 +1,6 @@
 {
-  "device": "[Sophos]_WAF",
-  "vendor": "Sophos",
+  "device": "Custom",
+  "vendor": "Custom",
   "format": {
     "type": "PLAIN",
     "raw": "$TIMESTAMP $EQP_IP NOTICE attack=$ATTACK_NAME src=$SRC_IP dst=$DST_IP action=$ACTION"
