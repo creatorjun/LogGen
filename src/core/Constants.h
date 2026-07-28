@@ -19,7 +19,7 @@ namespace Constants {
         inline constexpr int    kDefaultThreadPoolSize  = 8;
         inline constexpr size_t kDefaultQueueCapacity   = 131072;
         inline constexpr size_t kBatchSize              = 256;
-        inline constexpr size_t kFastBatchSize          = 8192;   // 4096 -> 8192
+        inline constexpr size_t kFastBatchSize          = 8192;
         inline constexpr double kFastPathThreshold      = 1000.0;
         inline constexpr double kMidPathThreshold       = 100.0;
         inline constexpr int    kMaxConsecutiveFails    = 5;
@@ -29,17 +29,16 @@ namespace Constants {
     }
 
     namespace Queue {
-        inline constexpr int  kSpinCount     = 1000;
-        inline constexpr int  kYieldCount    = 100;
-        inline constexpr auto kSleepDuration = std::chrono::microseconds(50);
+        inline constexpr int  kSpinCount  = 1000;
+        inline constexpr int  kYieldCount = 100;
     }
 
     namespace Network {
         inline constexpr int    kTcpConnectTimeoutMs  = 3000;
         inline constexpr int    kTcpSendTimeoutMs     = 2000;
-        inline constexpr size_t kUdpBatchCapacity     = 1024;          // 256  -> 1024
-        inline constexpr int    kUdpSendBufferBytes   = 64 * 1024 * 1024; // 8MB -> 64MB
-        inline constexpr size_t kTcpCoalesceReserve   = 4 * 1024 * 1024;  // 4MB pre-alloc for batch coalesce
+        inline constexpr size_t kUdpBatchCapacity     = 1024;
+        inline constexpr int    kUdpSendBufferBytes   = 64 * 1024 * 1024;
+        inline constexpr size_t kTcpCoalesceReserve   = 4 * 1024 * 1024;
     }
 
     namespace Logging {
