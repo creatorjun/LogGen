@@ -42,7 +42,7 @@ C++ 기반 SIM 연동 테스트용 로그 생성기. 복수의 가상 디바이�
 | vcpkg | 최신 | 패키지 관리자 |
 | OpenGL | 3.3 Core | GPU 드라이버 포함 |
 
-**vcpkg 의존 패키지**
+**vcpkg 의존 패키지** (`vcpkg.json` 에 이미 정의되어 있으므로 별도 지정 불필요)
 
 ```
 imgui[glfw-binding,opengl3-binding,freetype]
@@ -90,17 +90,46 @@ tar -czf /root/SIMLogGenerator_$(date +%Y%m%d_%H%M%S).tar.gz -C build SIMLogGene
 
 ### Windows
 
-**PowerShell (관리자)** 에서 실행합니다. Visual Studio 2022 및 Git이 사전 설치되어 있어야 합니다.
+> **사전 요구사항**
+> - [Visual Studio 2022](https://visualstudio.microsoft.com/) — **C++를 사용한 데스크톱 개발** 워크로드 선택 설치 (CMake 및 MSVC 포함)
+> - [Git for Windows](https://git-scm.com/download/win) 설치
+>
+> Visual Studio 2022를 설치하면 CMake가 함께 설치됩니다.
+> 별도 CMake 설치 시 반드시 **"Add CMake to the system PATH"** 옵션을 체크해야 합니다.
 
+**PowerShell (관리자 권한)** 에서 아래 명령을 순서대로 실행합니다.
+
+**① vcpkg 설치 및 PATH 등록**
 ```powershell
-git clone https://github.com/microsoft/vcpkg.git C:\vcpkg; `
-C:\vcpkg\bootstrap-vcpkg.bat; `
-C:\vcpkg\vcpkg integrate install; `
-C:\vcpkg\vcpkg install imgui[glfw-binding,opengl3-binding,freetype]:x64-windows implot:x64-windows glfw3:x64-windows nlohmann-json:x64-windows cpp-httplib:x64-windows yaml-cpp:x64-windows fmt:x64-windows; `
-git clone https://github.com/creatorjun/loggen.git; `
-cd loggen; `
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"; `
+git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+C:\vcpkg\bootstrap-vcpkg.bat
+C:\vcpkg\vcpkg integrate install
+
+[Environment]::SetEnvironmentVariable(
+    "PATH",
+    $env:PATH + ";C:\vcpkg",
+    [EnvironmentVariableTarget]::Machine
+)
+```
+
+> PATH 등록 후 **PowerShell을 새로 열어야** `vcpkg` 명령이 인식됩니다.
+
+**② 저장소 클론 및 의존 패키지 설치**
+```powershell
+git clone https://github.com/creatorjun/loggen.git C:\Users\HOME\Desktop\PROJECT\LogGen
+cd C:\Users\HOME\Desktop\PROJECT\LogGen
+vcpkg install
+```
+
+> 이 프로젝트는 `vcpkg.json` (manifest 모드)를 사용합니다.
+> `vcpkg install` 만 실행하면 패키지 이름 없이도 모든 의존성이 자동 설치됩니다.
+> `vcpkg install 패키지명` 형태로 개별 지정하면 오류가 발생합니다.
+
+**③ 빌드 및 실행**
+```powershell
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 cmake --build build --config Release
+.\build\Release\SIMLogGenerator.exe
 ```
 
 ---
@@ -128,30 +157,65 @@ cmake --build build -j$(sysctl -n hw.logicalcpu)
 
 ### Windows
 
-#### 1. vcpkg 설치
+#### 1. Visual Studio 2022 설치
 
-```cmd
+[Visual Studio 2022 다운로드](https://visualstudio.microsoft.com/)에서 Community(무료) 버전을 설치합니다.
+설치 시 **"C++를 사용한 데스크톱 개발"** 워크로드를 반드시 선택합니다. CMake와 MSVC가 함께 설치됩니다.
+
+#### 2. CMake PATH 확인
+
+Visual Studio와 별개로 CMake를 직접 설치한 경우, PowerShell에서 아래 명령으로 인식 여부를 확인합니다.
+
+```powershell
+cmake --version
+```
+
+`명령을 찾을 수 없습니다` 오류가 나오면 **관리자 PowerShell**에서 PATH를 수동 등록합니다.
+
+```powershell
+# CMake 설치 경로 확인
+Get-ChildItem "C:\Program Files" -Recurse -Filter "cmake.exe" -ErrorAction SilentlyContinue | Select-Object FullName
+
+# PATH 영구 등록 (경로는 실제 위치로 변경)
+[Environment]::SetEnvironmentVariable(
+    "PATH",
+    $env:PATH + ";C:\Program Files\CMake\bin",
+    [EnvironmentVariableTarget]::Machine
+)
+```
+
+> 또는 `winget install Kitware.CMake` 로 설치하면 PATH가 자동 등록됩니다.
+
+#### 3. vcpkg 설치 및 PATH 등록
+
+**관리자 PowerShell**에서 실행합니다.
+
+```powershell
 git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
-cd C:\vcpkg
-bootstrap-vcpkg.bat
-vcpkg integrate install
+C:\vcpkg\bootstrap-vcpkg.bat
+C:\vcpkg\vcpkg integrate install
+
+[Environment]::SetEnvironmentVariable(
+    "PATH",
+    $env:PATH + ";C:\vcpkg",
+    [EnvironmentVariableTarget]::Machine
+)
 ```
 
-#### 2. 의존 패키지 설치
+> PATH 등록 후 **반드시 PowerShell을 새로 열어야** `vcpkg` 명령이 인식됩니다.
+
+#### 4. 의존 패키지 설치
+
+프로젝트 루트에서 아래 명령만 실행합니다. `vcpkg.json`이 있으므로 패키지 이름을 별도로 지정하지 않습니다.
 
 ```cmd
-vcpkg install imgui[glfw-binding,opengl3-binding,freetype]:x64-windows ^
-              implot:x64-windows ^
-              glfw3:x64-windows ^
-              nlohmann-json:x64-windows ^
-              yaml-cpp:x64-windows ^
-              fmt:x64-windows ^
-              cpp-httplib:x64-windows
+cd C:\Users\HOME\Desktop\PROJECT\LogGen
+vcpkg install
 ```
 
-#### 3. Visual Studio 설치
-
-Visual Studio 2019 또는 2022에서 **C++를 사용한 데스크톱 개발** 워크로드를 선택해 설치합니다.
+> ⚠️ **주의**: manifest 모드에서는 `vcpkg install imgui glfw3 ...` 처럼 패키지를 직접 나열하면
+> `error: In manifest mode, vcpkg install does not support individual package arguments.` 오류가 발생합니다.
+> 반드시 `vcpkg install` 만 단독으로 실행하세요.
 
 ---
 
@@ -178,8 +242,8 @@ git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
 #### 3. 의존 패키지 설치
 
 ```bash
-~/vcpkg/vcpkg install imgui[glfw-binding,opengl3-binding,freetype] \
-                      implot glfw3 nlohmann-json yaml-cpp fmt cpp-httplib
+cd /path/to/LogGen
+~/vcpkg/vcpkg install
 ```
 
 ---
@@ -204,8 +268,8 @@ git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
 #### 3. 의존 패키지 설치
 
 ```bash
-~/vcpkg/vcpkg install imgui[glfw-binding,opengl3-binding,freetype] \
-                      implot glfw3 nlohmann-json yaml-cpp fmt cpp-httplib
+cd /path/to/LogGen
+~/vcpkg/vcpkg install
 ```
 
 ---
@@ -217,7 +281,11 @@ git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
 기존 빌드 캐시를 완전히 삭제하고 처음부터 다시 빌드합니다.
 
 ```cmd
-git pull && rd /s /q build && cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" && cmake --build build --config Release && .\build\Release\SIMLogGenerator.exe
+git pull
+rd /s /q build
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+cmake --build build --config Release
+.\build\Release\SIMLogGenerator.exe
 ```
 
 > vcpkg 경로가 다른 경우 `C:/vcpkg` 부분을 실제 경로로 변경합니다.
@@ -440,5 +508,6 @@ SIMLogGenerator/
 │   ├── persistence/         # 프로파일 JSON 직렬화/역직렬화
 │   └── ui/                  # ImGui 기반 패널 (AppWindow, MonitorPanel 등)
 ├── CMakeLists.txt
+├── vcpkg.json               # manifest 모드 의존성 정의
 └── README.md
 ```
