@@ -3,19 +3,25 @@
 #include "logging/Logger.h"
 #include <algorithm>
 
-EventPanelViewModel::EventPanelViewModel(std::vector<DeviceProfile>& profiles,
-                                         const std::function<void()>& onDirty)
+EventPanelViewModel::EventPanelViewModel(
+    std::vector<DeviceProfile>&      profiles,
+    const std::function<void()>&     onDirty,
+    const std::function<void(int)>&  onDateOffsetChanged)
     : m_profiles(&profiles)
     , m_onDirty(onDirty)
+    , m_onDateOffsetChanged(onDateOffsetChanged)
 {
     rebuildTargets();
 }
 
-void EventPanelViewModel::reset(std::vector<DeviceProfile>& profiles,
-                                const std::function<void()>& onDirty)
+void EventPanelViewModel::reset(
+    std::vector<DeviceProfile>&      profiles,
+    const std::function<void()>&     onDirty,
+    const std::function<void(int)>&  onDateOffsetChanged)
 {
-    m_profiles = &profiles;
-    m_onDirty  = onDirty;
+    m_profiles              = &profiles;
+    m_onDirty               = onDirty;
+    m_onDateOffsetChanged   = onDateOffsetChanged;
     rebuildTargets();
 }
 
@@ -43,6 +49,23 @@ DeviceProfile* EventPanelViewModel::singleTarget() {
 std::vector<DeviceProfile*> EventPanelViewModel::targets() {
     rebuildTargets();
     return m_targets;
+}
+
+void EventPanelViewModel::applyDateOffset() {
+    const int sign   = m_dateSign ? 1 : -1;
+    const int offset = sign * m_dateDays;
+    LOG_INFO("UI", "dateOffset -> " + std::to_string(offset) + " days");
+    if (m_onDateOffsetChanged) m_onDateOffsetChanged(offset);
+}
+
+void EventPanelViewModel::onDateSignChanged(bool positive) {
+    m_dateSign = positive;
+    applyDateOffset();
+}
+
+void EventPanelViewModel::onDateDaysChanged(int days) {
+    m_dateDays = std::clamp(days, kMinDateDays, kMaxDateDays);
+    applyDateOffset();
 }
 
 void EventPanelViewModel::dirty(const std::string& tag, const std::string& val) {
