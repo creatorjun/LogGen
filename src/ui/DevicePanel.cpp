@@ -4,7 +4,6 @@
 #include "logging/Logger.h"
 #include <imgui.h>
 #include <imgui_stdlib.h>
-#include <cmath>
 #include <cstring>
 
 static const float kPanelPadding  = 12.0f;
@@ -16,9 +15,6 @@ static const float kBtnWidth      = 44.0f;
 static const float kBtnHeight     = 22.0f;
 static const float kBtnRounding   = 4.0f;
 static const float kCardSpacing   = 5.0f;
-static const float kReloadBtnSize = 20.0f;
-
-static constexpr float kPi = 3.14159265358979323846f;
 
 static const char* kTemplateModalId = "##TemplateModal";
 
@@ -28,30 +24,6 @@ static void renderSectionHeader(const char* label, ImFont* fontBold) {
     ImGui::TextUnformatted(label);
     ImGui::PopStyleColor();
     ImGui::PopFont();
-}
-
-static void drawReloadIcon(ImDrawList* dl, ImVec2 center, float radius,
-                            ImU32 color, bool spinning, float timeSeconds) {
-    const int   segments = 32;
-    const float arcStart = spinning ? (timeSeconds * 3.0f) : 0.3f;
-    const float arcEnd   = arcStart + (kPi * 2.0f - 0.6f);
-    for (int i = 0; i < segments; ++i) {
-        const float a0 = arcStart + (arcEnd - arcStart) * (static_cast<float>(i)     / segments);
-        const float a1 = arcStart + (arcEnd - arcStart) * (static_cast<float>(i + 1) / segments);
-        dl->AddLine(
-            ImVec2(center.x + cosf(a0) * radius, center.y + sinf(a0) * radius),
-            ImVec2(center.x + cosf(a1) * radius, center.y + sinf(a1) * radius),
-            color, 1.8f);
-    }
-    const float arrowAngle = arcEnd;
-    const float arrowSize  = radius * 0.55f;
-    ImVec2 tip   = ImVec2(center.x + cosf(arrowAngle) * radius,
-                           center.y + sinf(arrowAngle) * radius);
-    ImVec2 left  = ImVec2(center.x + cosf(arrowAngle - 2.3f) * (radius - arrowSize),
-                           center.y + sinf(arrowAngle - 2.3f) * (radius - arrowSize));
-    ImVec2 right = ImVec2(center.x + cosf(arrowAngle + 0.4f) * (radius - arrowSize * 0.5f),
-                           center.y + sinf(arrowAngle + 0.4f) * (radius - arrowSize * 0.5f));
-    dl->AddTriangleFilled(tip, left, right, color);
 }
 
 static void drawCardBackground(ImDrawList* dl, ImVec2 pos, ImVec2 size,
@@ -193,46 +165,24 @@ void DevicePanel::render(DevicePanelViewModel& vm, float width, ImFont* fontBold
     ImGui::Dummy(ImVec2(0, 2.0f));
 
     {
-        const float lineH  = ImGui::GetTextLineHeight();
-        const float totalH = (kReloadBtnSize > lineH) ? kReloadBtnSize : lineH;
-        const float btnR   = kReloadBtnSize * 0.5f;
-
-        ImVec2 headerCursor = ImGui::GetCursorScreenPos();
-        ImGui::SetCursorScreenPos(
-            ImVec2(headerCursor.x, headerCursor.y + (totalH - lineH) * 0.5f));
         renderSectionHeader(UIText::DEVICE_PANEL_SECTION, fontBold);
+        ImGui::SameLine();
 
-        const float btnX = headerCursor.x
-                         + ImGui::CalcTextSize(UIText::DEVICE_PANEL_SECTION).x + 8.0f;
-        const float btnY = headerCursor.y + (totalH - kReloadBtnSize) * 0.5f;
-        ImVec2 rTL = ImVec2(btnX, btnY);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,  ImVec2(8.0f, 2.0f));
+        ImGui::PushStyleColor(ImGuiCol_Button,        UIColors::kSecondaryBtn);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, UIColors::kSecondaryBtnHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  UIColors::kSecondaryBtnActive);
+        ImGui::PushStyleColor(ImGuiCol_Text,          UIColors::kTextPrimary);
 
-        ImDrawList* dlHeader = ImGui::GetWindowDrawList();
-        ImGui::SetCursorScreenPos(rTL);
-        ImGui::InvisibleButton("##reload", ImVec2(kReloadBtnSize, kReloadBtnSize));
-        const bool reloadHov   = ImGui::IsItemHovered();
-        const bool reloadAct   = ImGui::IsItemActive();
-        const bool reloadClick = ImGui::IsItemClicked(ImGuiMouseButton_Left);
+        const bool reloading = vm.isReloading();
+        if (reloading) ImGui::BeginDisabled();
+        if (ImGui::Button(UIText::DEVICE_RELOAD_TOOLTIP))
+            vm.onReloadClicked();
+        if (reloading) ImGui::EndDisabled();
 
-        if (reloadHov) {
-            dlHeader->AddCircleFilled(
-                ImVec2(btnX + btnR, btnY + btnR), btnR + 2.0f,
-                IM_COL32(0, 120, 212, reloadAct ? 50 : 25));
-        }
-
-        const float t = static_cast<float>(ImGui::GetTime());
-        const bool  reloading = vm.isReloading();
-        ImU32 iconColor = reloading
-            ? IM_COL32(0, 120, 212, 220)
-            : (reloadHov ? IM_COL32(0, 120, 212, 230) : IM_COL32(80, 80, 80, 200));
-        drawReloadIcon(dlHeader, ImVec2(btnX + btnR, btnY + btnR),
-                       btnR - 2.0f, iconColor, reloading, t);
-
-        if (reloadHov) ImGui::SetTooltip("%s", UIText::DEVICE_RELOAD_TOOLTIP);
-        if (reloadClick) vm.onReloadClicked();
-
-        ImGui::SetCursorScreenPos(ImVec2(headerCursor.x, headerCursor.y + totalH));
-        ImGui::Dummy(ImVec2(0, 0));
+        ImGui::PopStyleColor(4);
+        ImGui::PopStyleVar(2);
     }
 
     ImGui::Spacing();
