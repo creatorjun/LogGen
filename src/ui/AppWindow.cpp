@@ -213,7 +213,8 @@ void AppWindow::mainLoop(std::vector<DeviceProfile>& profiles,
         [this]() { m_viewModel.requestReload(); });
     m_eventVM.reset(
         profiles,
-        [this, &onSaveRequest]() { m_viewModel.markDirty(); onSaveRequest(); });
+        [this, &onSaveRequest]() { m_viewModel.markDirty(); onSaveRequest(); },
+        [this](int offset)       { m_viewModel.setDateOffsetDays(offset); });
 
     LOG_INFO("UI", "Entering main render loop");
     while (!glfwWindowShouldClose(m_window)) {
