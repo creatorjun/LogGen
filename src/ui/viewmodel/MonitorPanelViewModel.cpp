@@ -14,24 +14,6 @@ MonitorPanelViewModel::MonitorPanelViewModel(
     , m_appViewModel(appViewModel)
 {}
 
-// m_dateSign: true = 미래(+), false = 과거(-)
-// 실제 전달값: 양수(오늘 + days) 또는 음수(오늘 - days)
-void MonitorPanelViewModel::applyDateOffset() {
-    const int sign   = m_dateSign ? 1 : -1;
-    const int offset = sign * m_dateDays;
-    m_appViewModel.setDateOffsetDays(offset);
-}
-
-void MonitorPanelViewModel::setDateSign(bool positive) {
-    m_dateSign = positive;
-    applyDateOffset();
-}
-
-void MonitorPanelViewModel::setDateDays(int days) {
-    m_dateDays = days;
-    applyDateOffset();
-}
-
 void MonitorPanelViewModel::tick(float deltaTime, bool engineRunning) {
     if (m_isRunning && !engineRunning && m_engineWasRunning) {
         m_isRunning = false;
@@ -137,8 +119,6 @@ bool                           MonitorPanelViewModel::scrollToBottom()   const {
 void                           MonitorPanelViewModel::clearScrollFlag()        { m_scrollToBottom = false; }
 
 void MonitorPanelViewModel::onStartClicked() {
-    // START 직전 현재 설정된 날짜 오프셋을 AppViewModel → 엔진에 전달
-    applyDateOffset();
     m_isRunning = true;
     if (!m_chartEverStarted) {
         m_time = 0.0f;
@@ -146,9 +126,7 @@ void MonitorPanelViewModel::onStartClicked() {
         for (auto& [k, d] : m_deviceEpsData) d.Erase();
         m_chartEverStarted = true;
     }
-    LOG_INFO("UI", "START button clicked - date offset applied (sign="
-             + std::string(m_dateSign ? "+" : "-")
-             + ", days=" + std::to_string(m_dateDays) + ")");
+    LOG_INFO("UI", "START button clicked");
 }
 
 void MonitorPanelViewModel::onStopClicked() {

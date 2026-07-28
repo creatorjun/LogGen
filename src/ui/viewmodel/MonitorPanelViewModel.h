@@ -44,11 +44,6 @@ public:
     [[nodiscard]] bool                           scrollToBottom()   const;
     void                                         clearScrollFlag();
 
-    [[nodiscard]] bool dateSign() const { return m_dateSign; }
-    [[nodiscard]] int  dateDays() const { return m_dateDays; }
-    void setDateSign(bool positive);
-    void setDateDays(int days);
-
     void onStartClicked();
     void onStopClicked();
     void clearTerminal();
@@ -71,9 +66,6 @@ private:
     bool     m_chartEverStarted = false;
     float    m_cachedTotalEps   = 0.0f;
 
-    bool     m_dateSign = false;
-    int      m_dateDays = 0;
-
     TimeSeriesData                                  m_totalEpsData;
     std::unordered_map<std::string, TimeSeriesData> m_deviceEpsData;
 
@@ -88,7 +80,6 @@ private:
     uint64_t                              m_displayedTotalSent = 0;
     std::chrono::steady_clock::time_point m_lastTotalSentTime{};
 
-    void applyDateOffset();
     void tickEps(float deltaTime);
     void tickLogPoll();
     void tickTotalSent(bool forceUpdate = false);
