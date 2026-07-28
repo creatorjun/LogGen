@@ -186,6 +186,74 @@ static void renderSchedulerSection(
     ImGui::PopStyleColor();
 }
 
+static void renderDateOffsetSection(EventPanelViewModel& vm, ImFont* fontBold) {
+    renderSectionHeader(UIText::LOG_DATE_OFFSET_LABEL, fontBold);
+
+    const bool isPositive = vm.dateSign();
+
+    if (!isPositive) {
+        ImGui::PushStyleColor(ImGuiCol_Button,        UIColors::kAccent);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, UIColors::kAccentHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  UIColors::kAccentActive);
+        ImGui::PushStyleColor(ImGuiCol_Text,          UIColors::kTextOnAccent);
+    } else {
+        ImGui::PushStyleColor(ImGuiCol_Button,        UIColors::kSmallBtnOffNorm);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, UIColors::kSmallBtnOffHov);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  UIColors::kSmallBtnOffAct);
+        ImGui::PushStyleColor(ImGuiCol_Text,          UIColors::kTextPrimary);
+    }
+    if (ImGui::Button("-##datesign", ImVec2(28.0f, 0.0f)))
+        vm.onDateSignChanged(false);
+    ImGui::PopStyleColor(4);
+
+    ImGui::SameLine();
+
+    if (isPositive) {
+        ImGui::PushStyleColor(ImGuiCol_Button,        UIColors::kAccent);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, UIColors::kAccentHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  UIColors::kAccentActive);
+        ImGui::PushStyleColor(ImGuiCol_Text,          UIColors::kTextOnAccent);
+    } else {
+        ImGui::PushStyleColor(ImGuiCol_Button,        UIColors::kSmallBtnOffNorm);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, UIColors::kSmallBtnOffHov);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  UIColors::kSmallBtnOffAct);
+        ImGui::PushStyleColor(ImGuiCol_Text,          UIColors::kTextPrimary);
+    }
+    if (ImGui::Button("+##datesign", ImVec2(28.0f, 0.0f)))
+        vm.onDateSignChanged(true);
+    ImGui::PopStyleColor(4);
+
+    ImGui::SameLine();
+
+    int days = vm.dateDays();
+    ImGui::PushStyleColor(ImGuiCol_FrameBg,        UIColors::kSurfaceSub);
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, UIColors::kFrameBgHovered);
+    ImGui::SetNextItemWidth(80.0f);
+    if (ImGui::InputInt("##dateDays", &days, 1, 10)) {
+        if (days < EventPanelViewModel::kMinDateDays) days = EventPanelViewModel::kMinDateDays;
+        if (days > EventPanelViewModel::kMaxDateDays) days = EventPanelViewModel::kMaxDateDays;
+        vm.onDateDaysChanged(days);
+    }
+    ImGui::PopStyleColor(2);
+
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Text, UIColors::kTextMuted);
+    ImGui::TextUnformatted(UIText::LOG_DATE_OFFSET_UNIT);
+    ImGui::PopStyleColor();
+
+    if (vm.dateDays() == 0) {
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Text, UIColors::kTextMuted);
+        ImGui::TextUnformatted(UIText::LOG_DATE_TODAY_HINT);
+        ImGui::PopStyleColor();
+    }
+
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, UIColors::kTextMuted);
+    ImGui::TextWrapped("%s", UIText::LOG_DATE_OFFSET_TOOLTIP);
+    ImGui::PopStyleColor();
+}
+
 void EventPanel::render(EventPanelViewModel& vm, float width, ImFont* fontBold) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(kPanelPadding, kPanelPadding));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
@@ -331,6 +399,12 @@ void EventPanel::render(EventPanelViewModel& vm, float width, ImFont* fontBold) 
     ImGui::Spacing();
 
     renderSchedulerSection(ref, vm, fontBold);
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    renderDateOffsetSection(vm, fontBold);
 
     ImGui::EndChild();
 }
