@@ -6,12 +6,10 @@
 MonitorPanelViewModel::MonitorPanelViewModel(
     IGeneratorEngine& engine,
     std::vector<DeviceProfile>& profiles,
-    LogBuffer& logBuffer,
-    AppViewModel& appViewModel)
+    LogBuffer& logBuffer)
     : m_engine(engine)
     , m_profiles(profiles)
     , m_logBuffer(logBuffer)
-    , m_appViewModel(appViewModel)
 {}
 
 void MonitorPanelViewModel::tick(float deltaTime, bool engineRunning) {

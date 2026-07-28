@@ -205,7 +205,7 @@ void AppWindow::mainLoop(std::vector<DeviceProfile>& profiles,
 
     m_profiles  = &profiles;
     m_monitorVM = std::make_unique<MonitorPanelViewModel>(
-        m_viewModel.engine(), profiles, m_logBuffer, m_viewModel);
+        m_viewModel.engine(), profiles, m_logBuffer);
     m_deviceVM.reset(
         profiles,
         [this]() { return m_viewModel.isReloading(); },

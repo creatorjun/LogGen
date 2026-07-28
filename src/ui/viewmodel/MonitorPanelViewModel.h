@@ -12,7 +12,6 @@
 #include "engine/IGeneratorEngine.h"
 #include "core/channel/LogBuffer.h"
 #include "ui/viewmodel/TimeSeriesData.h"
-#include "ui/viewmodel/AppViewModel.h"
 
 class MonitorPanelViewModel {
 public:
@@ -23,8 +22,7 @@ public:
 
     MonitorPanelViewModel(IGeneratorEngine&           engine,
                           std::vector<DeviceProfile>& profiles,
-                          LogBuffer&                  logBuffer,
-                          AppViewModel&               appViewModel);
+                          LogBuffer&                  logBuffer);
 
     void tick(float deltaTime, bool engineRunning);
 
@@ -58,7 +56,6 @@ private:
     IGeneratorEngine&           m_engine;
     std::vector<DeviceProfile>& m_profiles;
     LogBuffer&                  m_logBuffer;
-    AppViewModel&               m_appViewModel;
 
     bool     m_isRunning        = false;
     bool     m_engineWasRunning = false;
