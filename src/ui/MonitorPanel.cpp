@@ -64,9 +64,8 @@ void MonitorPanel::renderLogTab(MonitorPanelViewModel& vm) {
     const float termH   = availH * 0.32f;
     const float statsH  = 32.0f;
     const float btnH    = 44.0f;
-    const float dateH   = 32.0f;
     const float spacing = ImGui::GetStyle().ItemSpacing.y;
-    const float chartH  = availH - termH - statsH - btnH - dateH - spacing * 6.0f - 8.0f;
+    const float chartH  = availH - termH - statsH - btnH - spacing * 4.0f - 8.0f;
 
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 4.0f);
     ImGui::PushStyleColor(ImGuiCol_ChildBg, UIColors::kSurfaceMid);
@@ -99,9 +98,6 @@ void MonitorPanel::renderLogTab(MonitorPanelViewModel& vm) {
     ImGui::EndChild();
     ImGui::Spacing();
 
-    renderDateOffsetBar(vm);
-    ImGui::Spacing();
-
     if (!vm.isRunning()) {
         ImGui::PushStyleColor(ImGuiCol_Button,        UIColors::kAccent);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, UIColors::kAccentHover);
@@ -119,67 +115,6 @@ void MonitorPanel::renderLogTab(MonitorPanelViewModel& vm) {
             vm.onStopClicked();
         ImGui::PopStyleColor(4);
     }
-}
-
-// 날짜 오프셋 UI: [\ub85c\uadf8 \uc0dd\uc131\uc77c] [-] [+] [__n__] \uc77c
-// - \uc120\ud0dd\ub41c \ubd80\ud638 \ubc84\ud2bc\uc740 \ud30c\ub780\uc0c9(Accent), \uc120\ud0dd\ub418\uc9c0 \uc54a\uc740 \ucabd\uc740 \ud68c\uc0c9(SmallBtnOff)
-void MonitorPanel::renderDateOffsetBar(MonitorPanelViewModel& vm) {
-    ImGui::PushStyleColor(ImGuiCol_Text, UIColors::kTextMuted);
-    ImGui::TextUnformatted(UIText::LOG_DATE_OFFSET_LABEL);
-    ImGui::PopStyleColor();
-    ImGui::SameLine();
-
-    const bool isPositive = vm.dateSign();   // true = +(\ubbf8\ub798), false = -(\uacfc\uac70)
-
-    // --- [-] \ubc84\ud2bc ---
-    if (!isPositive) {
-        ImGui::PushStyleColor(ImGuiCol_Button,        UIColors::kAccent);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, UIColors::kAccentHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  UIColors::kAccentActive);
-        ImGui::PushStyleColor(ImGuiCol_Text,          UIColors::kTextOnAccent);
-    } else {
-        ImGui::PushStyleColor(ImGuiCol_Button,        UIColors::kSmallBtnOffNorm);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, UIColors::kSmallBtnOffHov);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  UIColors::kSmallBtnOffAct);
-        ImGui::PushStyleColor(ImGuiCol_Text,          UIColors::kTextPrimary);
-    }
-    if (ImGui::Button("-##datesign", ImVec2(28.0f, 0.0f)))
-        vm.setDateSign(false);
-    ImGui::PopStyleColor(4);
-
-    ImGui::SameLine();
-
-    // --- [+] \ubc84\ud2bc ---
-    if (isPositive) {
-        ImGui::PushStyleColor(ImGuiCol_Button,        UIColors::kAccent);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, UIColors::kAccentHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  UIColors::kAccentActive);
-        ImGui::PushStyleColor(ImGuiCol_Text,          UIColors::kTextOnAccent);
-    } else {
-        ImGui::PushStyleColor(ImGuiCol_Button,        UIColors::kSmallBtnOffNorm);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, UIColors::kSmallBtnOffHov);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  UIColors::kSmallBtnOffAct);
-        ImGui::PushStyleColor(ImGuiCol_Text,          UIColors::kTextPrimary);
-    }
-    if (ImGui::Button("+##datesign", ImVec2(28.0f, 0.0f)))
-        vm.setDateSign(true);
-    ImGui::PopStyleColor(4);
-
-    ImGui::SameLine();
-
-    // --- \uc77c\uc218 \uc785\ub825 ---
-    int days = vm.dateDays();
-    ImGui::SetNextItemWidth(80.0f);
-    if (ImGui::InputInt("##dateDays", &days, 1, 10)) {
-        if (days < 0)    days = 0;
-        if (days > 3650) days = 3650;
-        vm.setDateDays(days);
-    }
-
-    ImGui::SameLine();
-    ImGui::PushStyleColor(ImGuiCol_Text, UIColors::kTextMuted);
-    ImGui::TextUnformatted(UIText::LOG_DATE_OFFSET_UNIT);
-    ImGui::PopStyleColor();
 }
 
 void MonitorPanel::renderControlBar() {}

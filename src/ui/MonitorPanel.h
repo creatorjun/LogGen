@@ -15,7 +15,6 @@ public:
 
 private:
     void renderLogTab(MonitorPanelViewModel& vm);
-    void renderDateOffsetBar(MonitorPanelViewModel& vm);
     void renderEpsChart(MonitorPanelViewModel& vm);
     void renderLiveTerminal(MonitorPanelViewModel& vm);
     void renderControlBar();
