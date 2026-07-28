@@ -1,6 +1,11 @@
 // src/engine/ThreadPool.h
 #pragma once
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4324)
+#endif
+
 #include <vector>
 #include <thread>
 #include <atomic>
@@ -19,13 +24,13 @@ public:
 private:
     static void pinCurrentThread(size_t index);
 
-    static constexpr size_t kCacheLine  = std::hardware_destructive_interference_size;
-    static constexpr size_t kQueueCap   = 65536;
-    static constexpr size_t kQueueMask  = kQueueCap - 1;
+    static constexpr size_t kCacheLine = std::hardware_destructive_interference_size;
+    static constexpr size_t kQueueCap  = 65536;
+    static constexpr size_t kQueueMask = kQueueCap - 1;
 
     static_assert((kQueueCap & kQueueMask) == 0, "kQueueCap must be power of 2");
 
-    struct alignas(kCacheLine) Cell {
+    struct Cell {
         std::atomic<size_t>   seq{0};
         std::function<void()> task;
     };
@@ -37,9 +42,9 @@ private:
 
     static_assert(sizeof(PaddedIdx) == kCacheLine);
 
-    Cell       m_buf[kQueueCap];
-    PaddedIdx  m_enq;
-    PaddedIdx  m_deq;
+    std::unique_ptr<Cell[]>  m_buf;
+    PaddedIdx                m_enq;
+    PaddedIdx                m_deq;
 
     std::vector<std::thread> m_workers;
     std::atomic<bool>        m_stop{false};
@@ -47,3 +52,7 @@ private:
 
     std::atomic<bool>        m_taskFlag{false};
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
