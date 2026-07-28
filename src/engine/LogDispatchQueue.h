@@ -27,7 +27,7 @@ public:
             m_buf[i].seq.store(i, std::memory_order_relaxed);
         m_enqueuePos.store(0, std::memory_order_relaxed);
         m_dequeuePos.store(0, std::memory_order_relaxed);
-        m_wakeFlag.store(false, std::memory_order_relaxed);
+        m_epoch.store(0, std::memory_order_relaxed);
     }
 
     bool tryPush(LogEntry entry) {
@@ -49,7 +49,8 @@ public:
         }
         cell->data = std::move(entry);
         cell->seq.store(pos + 1, std::memory_order_release);
-        m_wakeFlag.notify_one();
+        m_epoch.fetch_add(1, std::memory_order_release);
+        m_epoch.notify_one();
         return true;
     }
 
@@ -92,7 +93,8 @@ public:
             cell->data = std::move(entries[i]);
             cell->seq.store(pos + 1, std::memory_order_release);
         }
-        m_wakeFlag.notify_one();
+        m_epoch.fetch_add(1, std::memory_order_release);
+        m_epoch.notify_one();
         return n;
     }
 
@@ -129,8 +131,13 @@ public:
                 continue;
             }
 
-            m_wakeFlag.store(false, std::memory_order_relaxed);
-            m_wakeFlag.wait(false, std::memory_order_acquire);
+            const size_t observed = m_epoch.load(std::memory_order_acquire);
+            if (!empty()) {
+                pos  = m_dequeuePos.load(std::memory_order_relaxed);
+                spin = 0;
+                continue;
+            }
+            m_epoch.wait(observed, std::memory_order_acquire);
 
             if (!running.load(std::memory_order_relaxed) && empty())
                 return 0;
@@ -155,8 +162,8 @@ public:
     }
 
     void wakeAll() {
-        m_wakeFlag.store(true, std::memory_order_release);
-        m_wakeFlag.notify_all();
+        m_epoch.fetch_add(1, std::memory_order_release);
+        m_epoch.notify_all();
     }
 
     [[nodiscard]] bool   empty()    const noexcept {
@@ -199,7 +206,7 @@ private:
 
     PaddedAtomic              m_enqueuePos;
     PaddedAtomic              m_dequeuePos;
-    alignas(kCacheLine) std::atomic<bool> m_wakeFlag{false};
+    alignas(kCacheLine) std::atomic<size_t> m_epoch{0};
 
     size_t            m_capacity;
     size_t            m_mask;
