@@ -17,6 +17,8 @@ public:
     static constexpr float    kMaxBurstDuration = 60.0f;
     static constexpr float    kMinBurstInterval = 5.0f;
     static constexpr float    kMaxBurstInterval = 300.0f;
+    static constexpr int      kMinDateDays      = 0;
+    static constexpr int      kMaxDateDays      = 3650;
 
     struct IpBlockBinding {
         bool&        randomFlag;
@@ -27,11 +29,15 @@ public:
 
     EventPanelViewModel() = default;
 
-    explicit EventPanelViewModel(std::vector<DeviceProfile>& profiles,
-                                 const std::function<void()>& onDirty);
+    explicit EventPanelViewModel(
+        std::vector<DeviceProfile>&      profiles,
+        const std::function<void()>&     onDirty,
+        const std::function<void(int)>&  onDateOffsetChanged);
 
-    void reset(std::vector<DeviceProfile>& profiles,
-               const std::function<void()>& onDirty);
+    void reset(
+        std::vector<DeviceProfile>&      profiles,
+        const std::function<void()>&     onDirty,
+        const std::function<void(int)>&  onDateOffsetChanged);
 
     [[nodiscard]] bool hasNoDevice()   const;
     [[nodiscard]] bool hasNoEnabled()  const;
@@ -40,6 +46,11 @@ public:
 
     [[nodiscard]] DeviceProfile*              singleTarget();
     [[nodiscard]] std::vector<DeviceProfile*> targets();
+
+    [[nodiscard]] bool dateSign() const { return m_dateSign; }
+    [[nodiscard]] int  dateDays() const { return m_dateDays; }
+    void onDateSignChanged(bool positive);
+    void onDateDaysChanged(int days);
 
     void onEqpIpChanged(const std::string& val);
     void onCollectorIpChanged(const std::string& val);
@@ -65,8 +76,13 @@ public:
 private:
     std::vector<DeviceProfile>*  m_profiles = nullptr;
     std::function<void()>        m_onDirty;
+    std::function<void(int)>     m_onDateOffsetChanged;
     std::vector<DeviceProfile*>  m_targets;
+
+    bool m_dateSign = false;
+    int  m_dateDays = 0;
 
     void rebuildTargets();
     void dirty(const std::string& tag, const std::string& val);
+    void applyDateOffset();
 };
