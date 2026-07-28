@@ -15,6 +15,7 @@
 #  include <netinet/in.h>
 #  include <netinet/tcp.h>
 #  include <arpa/inet.h>
+#  include <sys/uio.h>
 #  include <unistd.h>
    using TcpSocket = int;
    static constexpr TcpSocket kInvalidTcpSocket = -1;
@@ -35,10 +36,12 @@ public:
     void closeConnection()                                           override;
 
 private:
-    static constexpr int kConnectTimeoutMs = 3000;
+    static constexpr int  kConnectTimeoutMs = 3000;
+    static constexpr char kNewline          = '\n';
 
     bool reconnect();
     bool sendRaw(const char* data, size_t len);
+    bool sendLogScatter(const std::string& rawLog);
 
     TcpSocket   m_socket    = kInvalidTcpSocket;
     std::string m_targetIp;

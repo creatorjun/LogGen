@@ -19,14 +19,12 @@ bool TCPSender::openConnection(const std::string& targetIp, uint16_t port) {
         return false;
     }
 
-    // TCP_NODELAY: disable Nagle — we coalesce ourselves
 #ifdef _WIN32
     BOOL nodelay = TRUE;
     setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY,
                reinterpret_cast<const char*>(&nodelay), sizeof(nodelay));
 
-    // send-side SO_SNDBUF
-    int sndbuf = Constants::Network::kUdpSendBufferBytes; // reuse same 64MB constant
+    int sndbuf = Constants::Network::kUdpSendBufferBytes;
     setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF,
                reinterpret_cast<const char*>(&sndbuf), sizeof(sndbuf));
 
@@ -94,26 +92,45 @@ bool TCPSender::sendRaw(const char* data, size_t len) {
     return true;
 }
 
+bool TCPSender::sendLogScatter(const std::string& rawLog) {
+#ifdef _WIN32
+    WSABUF bufs[2];
+    bufs[0].buf = const_cast<char*>(rawLog.c_str());
+    bufs[0].len = static_cast<ULONG>(rawLog.size());
+    bufs[1].buf = const_cast<char*>(&kNewline);
+    bufs[1].len = 1;
+    DWORD bytesSent = 0;
+    return WSASend(m_socket, bufs, 2, &bytesSent, 0, nullptr, nullptr) == 0;
+#else
+    struct iovec iov[2];
+    iov[0].iov_base = const_cast<char*>(rawLog.data());
+    iov[0].iov_len  = rawLog.size();
+    iov[1].iov_base = const_cast<char*>(&kNewline);
+    iov[1].iov_len  = 1;
+
+    struct msghdr msg = {};
+    msg.msg_iov    = iov;
+    msg.msg_iovlen = 2;
+
+    ssize_t n = sendmsg(m_socket, &msg, MSG_NOSIGNAL);
+    return n == static_cast<ssize_t>(rawLog.size() + 1);
+#endif
+}
+
 bool TCPSender::sendLog(const std::string& rawLog) {
     if (m_socket == kInvalidTcpSocket) return false;
 
-    // fast path: single send with inline newline via scatter-gather
-    m_coalesceBuf.assign(rawLog);
-    m_coalesceBuf += '\n';
-
-    if (sendRaw(m_coalesceBuf.data(), m_coalesceBuf.size())) return true;
+    if (sendLogScatter(rawLog)) return true;
 
     LOG_WARN("NETWORK", "TCP send failed, attempting reconnect: " +
              m_targetIp + ":" + std::to_string(m_port));
     if (!reconnect()) return false;
-    return sendRaw(m_coalesceBuf.data(), m_coalesceBuf.size());
+    return sendLogScatter(rawLog);
 }
 
 bool TCPSender::sendBatch(const std::vector<std::string>& logs) {
     if (m_socket == kInvalidTcpSocket || logs.empty()) return false;
 
-    // Coalesce all logs into one buffer: "log1\nlog2\n..."
-    // This turns N syscalls into 1, dramatically reducing overhead.
     m_coalesceBuf.clear();
     for (const auto& log : logs) {
         m_coalesceBuf += log;
