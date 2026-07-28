@@ -77,8 +77,13 @@ ThreadPool::ThreadPool(size_t threads, bool enableAffinity)
                             continue;
                         }
 
-                        m_taskFlag.store(false, std::memory_order_relaxed);
-                        m_taskFlag.wait(false, std::memory_order_acquire);
+                        const size_t observed = m_epoch.load(std::memory_order_acquire);
+                        if (m_deq.val.load(std::memory_order_relaxed) != pos) {
+                            pos  = m_deq.val.load(std::memory_order_relaxed);
+                            spin = 0;
+                            continue;
+                        }
+                        m_epoch.wait(observed, std::memory_order_acquire);
 
                         if (m_stop.load(std::memory_order_relaxed)) return;
 
@@ -118,14 +123,14 @@ void ThreadPool::enqueue(std::function<void()> task) {
     cell->task = std::move(task);
     cell->seq.store(pos + 1, std::memory_order_release);
 
-    m_taskFlag.store(true, std::memory_order_release);
-    m_taskFlag.notify_one();
+    m_epoch.fetch_add(1, std::memory_order_release);
+    m_epoch.notify_one();
 }
 
 ThreadPool::~ThreadPool() {
     m_stop.store(true, std::memory_order_release);
-    m_taskFlag.store(true, std::memory_order_release);
-    m_taskFlag.notify_all();
+    m_epoch.fetch_add(1, std::memory_order_release);
+    m_epoch.notify_all();
     for (std::thread& w : m_workers)
         if (w.joinable()) w.join();
 }

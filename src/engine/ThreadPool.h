@@ -50,7 +50,7 @@ private:
     std::atomic<bool>        m_stop{false};
     bool                     m_enableAffinity{true};
 
-    std::atomic<bool>        m_taskFlag{false};
+    std::atomic<size_t>      m_epoch{0};
 };
 
 #ifdef _MSC_VER
