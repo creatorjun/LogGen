@@ -12,6 +12,7 @@
 #include <chrono>
 #include <flat_map>
 #include <flat_set>
+#include <unordered_set>
 #include <expected>
 #include <ranges>
 #include "core/interfaces/IGeneratorEngine.h"
@@ -92,7 +93,7 @@ private:
     std::flat_map<std::string, std::unique_ptr<std::atomic<uint32_t>>>         m_deviceRatesFixed;
     std::flat_map<std::string, int>                                            m_profileWorkerCount;
     std::atomic<uint64_t>                                                      m_totalSentCount{0};
-    std::flat_set<std::string>                                                 m_activeWorkers;
+    std::unordered_set<std::string>                                            m_activeWorkers;
 
     std::atomic<int> m_dateOffsetDays{0};
     TIPool           m_tiPool;

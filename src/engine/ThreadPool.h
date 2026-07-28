@@ -2,13 +2,12 @@
 #pragma once
 
 #include <vector>
-#include <deque>
 #include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <functional>
 #include <atomic>
+#include <functional>
 #include <cstddef>
+#include <new>
+#include <memory>
 
 class ThreadPool {
 public:
@@ -20,10 +19,31 @@ public:
 private:
     static void pinCurrentThread(size_t index);
 
-    std::vector<std::thread>           m_workers;
-    std::deque<std::function<void()>>  m_tasks;
-    std::mutex                         m_queueMutex;
-    std::condition_variable            m_cv;
-    std::atomic<bool>                  m_stop{false};
-    bool                               m_enableAffinity{true};
+    static constexpr size_t kCacheLine  = std::hardware_destructive_interference_size;
+    static constexpr size_t kQueueCap   = 65536;
+    static constexpr size_t kQueueMask  = kQueueCap - 1;
+
+    static_assert((kQueueCap & kQueueMask) == 0, "kQueueCap must be power of 2");
+
+    struct alignas(kCacheLine) Cell {
+        std::atomic<size_t>   seq{0};
+        std::function<void()> task;
+    };
+
+    struct alignas(kCacheLine) PaddedIdx {
+        std::atomic<size_t> val{0};
+        char pad[kCacheLine - sizeof(std::atomic<size_t>)];
+    };
+
+    static_assert(sizeof(PaddedIdx) == kCacheLine);
+
+    Cell       m_buf[kQueueCap];
+    PaddedIdx  m_enq;
+    PaddedIdx  m_deq;
+
+    std::vector<std::thread> m_workers;
+    std::atomic<bool>        m_stop{false};
+    bool                     m_enableAffinity{true};
+
+    std::atomic<bool>        m_taskFlag{false};
 };
