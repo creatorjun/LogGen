@@ -43,45 +43,37 @@ void MonitorPanelViewModel::tickEps(float deltaTime) {
 }
 
 void MonitorPanelViewModel::tickLogPoll() {
-    const long long pollMs = (m_cachedTotalEps < kEpsHighThreshold)
-        ? kIntervalLowMs : kIntervalHighMs;
-    const auto now     = std::chrono::steady_clock::now();
-    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        now - m_lastLogPollTime).count();
-    if (elapsed < pollMs) return;
-
     const uint64_t ver = m_logBuffer.getVersion();
-    if (ver != m_lastVersion) {
-        auto newLogs = m_logBuffer.getNewLogs(m_logOffset);
-        if (!newLogs.empty()) {
-            for (const auto& log : newLogs) {
-                std::string line;
-                line.reserve(log.deviceName.size() + log.rawLog.size() + 4);
-                line += '[';
-                line += log.deviceName;
-                line += "] ";
-                line += log.rawLog;
-                m_terminalLines.push_back(std::move(line));
-                m_terminalSelected.push_back(false);
-            }
-            while (m_terminalLines.size() > kMaxTerminalLines) {
-                m_terminalLines.pop_front();
-                m_terminalSelected.pop_front();
-                if (m_lastClickedLine > 0) --m_lastClickedLine;
-                else                       m_lastClickedLine = -1;
-            }
-            m_scrollToBottom = true;
+    if (ver == m_lastVersion) return;
+
+    auto newLogs = m_logBuffer.getNewLogs(m_logOffset);
+    if (!newLogs.empty()) {
+        for (const auto& log : newLogs) {
+            std::string line;
+            line.reserve(log.deviceName.size() + log.rawLog.size() + 4);
+            line += '[';
+            line += log.deviceName;
+            line += "] ";
+            line += log.rawLog;
+            m_terminalLines.push_back(std::move(line));
+            m_terminalSelected.push_back(false);
         }
-        if (m_logBuffer.getTotalPushed() == 0 && !m_terminalLines.empty()) {
-            m_terminalLines.clear();
-            m_terminalSelected.clear();
-            m_lastClickedLine = -1;
-            m_logOffset       = 0;
-            LOG_DEBUG("UI", "Terminal buffer cleared");
+        while (m_terminalLines.size() > kMaxTerminalLines) {
+            m_terminalLines.pop_front();
+            m_terminalSelected.pop_front();
+            if (m_lastClickedLine > 0) --m_lastClickedLine;
+            else                       m_lastClickedLine = -1;
         }
-        m_lastVersion = ver;
+        m_scrollToBottom = true;
     }
-    m_lastLogPollTime = now;
+    if (m_logBuffer.getTotalPushed() == 0 && !m_terminalLines.empty()) {
+        m_terminalLines.clear();
+        m_terminalSelected.clear();
+        m_lastClickedLine = -1;
+        m_logOffset       = 0;
+        LOG_DEBUG("UI", "Terminal buffer cleared");
+    }
+    m_lastVersion = ver;
 }
 
 void MonitorPanelViewModel::tickTotalSent(bool forceUpdate) {
@@ -90,7 +82,7 @@ void MonitorPanelViewModel::tickTotalSent(bool forceUpdate) {
         now - m_lastTotalSentTime).count();
     const bool needUpdate = forceUpdate
         || (m_cachedTotalEps < kEpsHighThreshold)
-        || (elapsedSec >= 0.5)
+        || (elapsedSec >= static_cast<double>(kIntervalHighSentMs) / 1000.0)
         || (m_lastTotalSentTime == std::chrono::steady_clock::time_point{});
     if (needUpdate) {
         m_displayedTotalSent = m_engine.getTotalSent();

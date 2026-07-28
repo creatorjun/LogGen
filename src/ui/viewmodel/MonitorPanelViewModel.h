@@ -15,10 +15,9 @@
 
 class MonitorPanelViewModel {
 public:
-    static constexpr size_t    kMaxTerminalLines = 2000;
-    static constexpr float     kEpsHighThreshold = 60.0f;
-    static constexpr long long kIntervalLowMs    = 16;
-    static constexpr long long kIntervalHighMs   = 500;
+    static constexpr size_t    kMaxTerminalLines  = 2000;
+    static constexpr float     kEpsHighThreshold  = 60.0f;
+    static constexpr long long kIntervalHighSentMs = 500;
 
     MonitorPanelViewModel(IGeneratorEngine&           engine,
                           std::vector<DeviceProfile>& profiles,

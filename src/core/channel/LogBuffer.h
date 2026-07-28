@@ -36,19 +36,29 @@ public:
         return m_totalPushed.load(std::memory_order_relaxed);
     }
 
+    // offset: caller tracks how many logs it has consumed so far (0-based absolute index).
+    // Returns all logs from [offset, total), capped to kCapacity (ring-buffer limit).
+    // offset is updated to total on return.
     [[nodiscard]] std::vector<LogEntry> getNewLogs(uint64_t& offset) const {
         std::lock_guard<std::mutex> lk(m_mutex);
         const uint64_t total = m_totalPushed.load(std::memory_order_relaxed);
         if (total <= offset) return {};
 
-        const uint64_t newCount  = total - offset;
-        const size_t   toFetch   = static_cast<size_t>(std::min(newCount, static_cast<uint64_t>(kCapacity)));
-        const size_t   fetchCapped = std::min(toFetch, m_count);
-        const size_t   startIdx  = (m_head + kCapacity - fetchCapped) % kCapacity;
+        const uint64_t newCount = total - offset;
+        // Cap to what is still in the ring buffer.
+        const size_t toFetch = static_cast<size_t>(
+            std::min(newCount, static_cast<uint64_t>(kCapacity)));
+
+        // The oldest retained entry sits at:
+        //   (m_head + kCapacity - m_count) % kCapacity
+        // Among those m_count entries, the ones corresponding to
+        // [total - toFetch, total) are the last toFetch entries.
+        const size_t startIdx =
+            (m_head + kCapacity - toFetch) % kCapacity;
 
         std::vector<LogEntry> result;
-        result.reserve(fetchCapped);
-        for (size_t i = 0; i < fetchCapped; ++i)
+        result.reserve(toFetch);
+        for (size_t i = 0; i < toFetch; ++i)
             result.push_back(m_buf[(startIdx + i) % kCapacity]);
 
         offset = total;
