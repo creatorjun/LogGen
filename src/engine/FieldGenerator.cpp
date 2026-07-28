@@ -144,7 +144,7 @@ uint16_t FieldGenerator::generateRandomPort(const std::vector<uint16_t>& ports) 
     if (ports.empty()) return 80;
     const size_t n = ports.size();
     if (n != m_lastDstPortCount) {
-        m_distDstPort     = std::uniform_int_distribution<size_t>(0, n - 1);
+        m_distDstPort      = std::uniform_int_distribution<size_t>(0, n - 1);
         m_lastDstPortCount = n;
     }
     return ports[m_distDstPort(m_rng)];
@@ -258,8 +258,8 @@ uint32_t FieldGenerator::generateRandomCount(uint32_t minVal, uint32_t maxVal) c
 size_t FieldGenerator::pickIndex(size_t count) const {
     if (count == 0) return 0;
     if (count != m_lastPickCount) {
-        m_distPickIndex  = std::uniform_int_distribution<size_t>(0, count - 1);
-        m_lastPickCount  = count;
+        m_distPickIndex = std::uniform_int_distribution<size_t>(0, count - 1);
+        m_lastPickCount = count;
     }
     return m_distPickIndex(m_rng);
 }
@@ -337,14 +337,11 @@ std::string_view FieldGenerator::generateExtField() const {
     return pickFromTable(kTbl, m_distExtField);
 }
 
-std::string FieldGenerator::generateBlackSha1() const {
+std::string_view FieldGenerator::generateBlackSha1() const {
     static constexpr char kHex[] = "0123456789abcdef";
-    std::string sha1;
-    sha1.resize(40);
-    std::uniform_int_distribution<int> dist(0, 15);
-    for (char& c : sha1)
-        c = kHex[dist(m_rng)];
-    return sha1;
+    for (int i = 0; i < 40; ++i)
+        m_sha1Buf[i] = kHex[m_distHex(m_rng)];
+    return { m_sha1Buf, 40 };
 }
 
 std::string FieldGenerator::generateIpLong(const std::string& ip) const {

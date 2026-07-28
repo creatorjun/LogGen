@@ -38,19 +38,19 @@ public:
     [[nodiscard]] std::string_view generateHttpHost()    const;
     [[nodiscard]] std::string_view generateSeqNum()      const;
 
-    [[nodiscard]] std::string_view generateCity()         const;
-    [[nodiscard]] std::string_view generateEmail()        const;
-    [[nodiscard]] std::string_view generateTrafficType()  const;
+    [[nodiscard]] std::string_view generateCity()          const;
+    [[nodiscard]] std::string_view generateEmail()         const;
+    [[nodiscard]] std::string_view generateTrafficType()   const;
     [[nodiscard]] std::string_view generateVirusDivision() const;
-    [[nodiscard]] std::string_view generateInstCd1()      const;
-    [[nodiscard]] std::string_view generatePayload()      const;
-    [[nodiscard]] std::string_view generateOriginalLog()  const;
-    [[nodiscard]] std::string_view generateExtField()     const;
-    [[nodiscard]] std::string      generateBlackSha1()    const;
+    [[nodiscard]] std::string_view generateInstCd1()       const;
+    [[nodiscard]] std::string_view generatePayload()       const;
+    [[nodiscard]] std::string_view generateOriginalLog()   const;
+    [[nodiscard]] std::string_view generateExtField()      const;
+    [[nodiscard]] std::string_view generateBlackSha1()     const;
     [[nodiscard]] std::string      generateIpLong(const std::string& ip) const;
-    [[nodiscard]] std::string_view generateLatitude()     const;
-    [[nodiscard]] std::string_view generateRebuildDt()    const;
-    [[nodiscard]] std::string_view generateRegiNo()       const;
+    [[nodiscard]] std::string_view generateLatitude()      const;
+    [[nodiscard]] std::string_view generateRebuildDt()     const;
+    [[nodiscard]] std::string_view generateRegiNo()        const;
     [[nodiscard]] uint32_t generateRandomCount(uint32_t minVal, uint32_t maxVal) const;
 
     [[nodiscard]] uint16_t generateRandomSrcPort() const;
@@ -103,6 +103,7 @@ private:
     mutable std::uniform_int_distribution<int>      m_distRegiNo{ 0, 4 };
     mutable std::uniform_int_distribution<uint32_t> m_distFileSize{ 1024u, 10485760u };
     mutable std::uniform_int_distribution<uint32_t> m_distOutPkt{ 1u, 200u };
+    mutable std::uniform_int_distribution<int>      m_distHex{ 0, 15 };
 
     mutable uint32_t m_cachedIpStart = 0;
     mutable uint32_t m_cachedIpEnd   = 0;
@@ -143,6 +144,7 @@ private:
     mutable char   m_pidBuf[8]       = {};
     mutable size_t m_pidLen          = 0;
 
+    mutable char   m_sha1Buf[40]     = {};
 
     mutable std::atomic<uint64_t> m_seqCounter{ 1 };
     mutable char                  m_seqBuf[24] = {};
