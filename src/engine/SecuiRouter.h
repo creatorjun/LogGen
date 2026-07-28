@@ -3,9 +3,10 @@
 
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
+#include <vector>
 #include <mutex>
 #include <cstdint>
+#include <atomic>
 #include "core/ApiTypes.h"
 #include "core/interfaces/ISubRouter.h"
 
@@ -16,45 +17,54 @@ public:
     ApiResponse route(const ApiRequest& req) override;
 
 private:
-    bool        isAuthenticated(const ApiRequest& req) const;
-    std::string createSession();
-    void        removeSession(const std::string& token);
+    static std::string makeToken();
+    static int64_t     nowUnix();
 
-    ApiResponse handleLogin(const ApiRequest& req);
-    ApiResponse handleLogout(const ApiRequest& req);
-    ApiResponse handlePolicyList(const ApiRequest& req);
-    ApiResponse handlePolicyCreate(const ApiRequest& req);
-    ApiResponse handlePolicyGet(const ApiRequest& req, const std::string& id);
-    ApiResponse handlePolicyUpdate(const ApiRequest& req, const std::string& id);
-    ApiResponse handlePolicyDelete(const ApiRequest& req, const std::string& id);
-    ApiResponse handleBlacklistList(const ApiRequest& req);
-    ApiResponse handleBlacklistCreate(const ApiRequest& req);
-    ApiResponse handleBlacklistGet(const ApiRequest& req, const std::string& id);
-    ApiResponse handleBlacklistUpdate(const ApiRequest& req, const std::string& id);
-    ApiResponse handleBlacklistDelete(const ApiRequest& req, const std::string& id);
+    std::string createToken(const std::string& clientId);
+    void        removeToken(const std::string& token);
+    bool        isAuthenticated(const ApiRequest& req) const;
+
+    ApiResponse handleBadRequest(const std::string& msg);
+    ApiResponse handleSuccess(const std::string& dataJson);
     ApiResponse handleUnauthorized();
     ApiResponse handleNotFound(const ApiRequest& req);
 
-    struct PolicyEntry {
-        std::string id;
-        std::string name;
-        std::string action;
-        std::string srcIp;
-        std::string dstIp;
-        bool        enabled = true;
+    ApiResponse handleToken(const ApiRequest& req);
+    ApiResponse handleRevokeToken(const ApiRequest& req);
+
+    ApiResponse handleBlacklistGet(const ApiRequest& req);
+    ApiResponse handleBlacklistAdd(const ApiRequest& req);
+    ApiResponse handleBlacklistDelete(const ApiRequest& req);
+
+    ApiResponse handleAddressGroupGet(const ApiRequest& req);
+    ApiResponse handleAddressGroupAddMember(const ApiRequest& req);
+    ApiResponse handleAddressGroupDeleteMember(const ApiRequest& req);
+
+    ApiResponse handlePolicyGet(const ApiRequest& req);
+    ApiResponse handleSessionGet(const ApiRequest& req);
+    ApiResponse handleSystemInfo(const ApiRequest& req);
+
+    struct TokenEntry {
+        std::string clientId;
+        int64_t     expires = 0;
     };
 
     struct BlacklistEntry {
-        std::string id;
         std::string ip;
-        std::string reason;
-        bool        active = true;
+        std::string direction;
+        int         ttlDays      = 365;
+        int64_t     registeredAt = 0;
+        int64_t     expiresAt    = 0;
     };
 
-    mutable std::mutex                                 m_sessionMutex;
-    std::unordered_set<std::string>                    m_sessions;
-    mutable std::mutex                                 m_dataMutex;
-    std::unordered_map<std::string, PolicyEntry>       m_policies;
-    std::unordered_map<std::string, BlacklistEntry>    m_blacklists;
-    std::atomic<uint64_t>                              m_idCounter{1};
+    struct AddressGroupEntry {
+        std::string              groupName;
+        std::string              zone;
+        std::vector<std::string> members;
+    };
+
+    mutable std::mutex                                      m_mutex;
+    std::unordered_map<std::string, TokenEntry>             m_tokens;
+    std::vector<BlacklistEntry>                             m_blacklist;
+    std::unordered_map<std::string, AddressGroupEntry>      m_addressGroups;
 };
