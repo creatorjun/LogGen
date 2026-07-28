@@ -1,38 +1,17 @@
 // src/engine/ApiRouter.cpp
 #include "ApiRouter.h"
-#include "NexGfwRouter.h"
-#include "VirusTotalRouter.h"
-#include "SpamhausRouter.h"
-#include "SecuiRouter.h"
-#include "FortinetRouter.h"
-#include "Mf2Router.h"
-#include "WinsTaxiiRouter.h"
 #include "logging/Logger.h"
 #include <nlohmann/json.hpp>
 #include <sstream>
 
 using json = nlohmann::json;
 
-ApiRouter::ApiRouter()
-    : m_nexgfw    (std::make_unique<NexGfwRouter>())
-    , m_virustotal(std::make_unique<VirusTotalRouter>())
-    , m_spamhaus  (std::make_unique<SpamhausRouter>())
-    , m_secui     (std::make_unique<SecuiRouter>())
-    , m_fortinet  (std::make_unique<FortinetRouter>())
-    , m_mf2       (std::make_unique<Mf2Router>())
-    , m_winsTaxii (std::make_unique<WinsTaxiiRouter>())
+ApiRouter::ApiRouter(std::vector<std::unique_ptr<ISubRouter>> subRouters,
+                     std::vector<PrefixEntry>                 prefixMap)
+    : m_subRouters(std::move(subRouters))
 {
-    addPrefix("/nexgfw/",     m_nexgfw.get());
-    addPrefix("/vtapi/",      m_virustotal.get());
-    addPrefix("/spamhaus/",   m_spamhaus.get());
-    addPrefix("/secui/",      m_secui.get());
-    addPrefix("/api/v2/",     m_fortinet.get());
-    addPrefix("/logincheck",  m_fortinet.get());
-    addPrefix("/logout",      m_fortinet.get());
-    addPrefix("/fortinet/",   m_fortinet.get());
-    addPrefix("/mf2/",        m_mf2.get());
-    addPrefix("/api/taxii2/", m_winsTaxii.get());
-    addPrefix("/wins/",       m_winsTaxii.get());
+    for (auto& e : prefixMap)
+        m_prefixRoutes.emplace_back(std::move(e.prefix), e.router);
 
     addExact("GET",  "/api/v1/health", [this](const ApiRequest& r){ return handleHealth(r); });
     addExact("POST", "/api/v1/alerts", [this](const ApiRequest& r){ return handleAlerts(r); });
@@ -45,10 +24,6 @@ ApiRouter::~ApiRouter() = default;
 void ApiRouter::addExact(const std::string& method, const std::string& path,
                           RouteEntry::Handler handler) {
     m_exactRoutes[method + ":" + path] = RouteEntry{ std::move(handler) };
-}
-
-void ApiRouter::addPrefix(const std::string& prefix, ISubRouter* subRouter) {
-    m_prefixRoutes.emplace_back(prefix, subRouter);
 }
 
 static void logRawRequest(const ApiRequest& req) {

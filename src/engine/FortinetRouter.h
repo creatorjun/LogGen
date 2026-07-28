@@ -8,8 +8,7 @@
 #include <mutex>
 #include <cstdint>
 #include "core/ApiTypes.h"
-#include "engine/ISubRouter.h"
-// nlohmann/json.hpp is an implementation detail — included only in FortinetRouter.cpp
+#include "core/interfaces/ISubRouter.h"
 
 class FortinetRouter : public ISubRouter {
 public:

@@ -3,7 +3,7 @@
 #include "ui/UIConstants.h"
 #include "persistence/SessionManager.h"
 #include "engine/GeneratorEngine.h"
-#include "engine/ApiRouter.h"
+#include "engine/RouterFactory.h"
 #include "engine/SoarMockEngine.h"
 #include "infrastructure/AppConfig.h"
 #include "logging/Logger.h"
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
         LOG_WARN("SESSION", "No previous session found. Starting with empty profiles.");
     }
 
-    auto apiRouter  = std::make_unique<ApiRouter>();
+    auto apiRouter  = RouterFactory::create();
     auto genEngine  = std::make_unique<GeneratorEngine>(
         Constants::Engine::kDefaultThreadPoolSize, cfg.queueCapacity);
     auto soarEngine = std::make_unique<SoarMockEngine>(*apiRouter);

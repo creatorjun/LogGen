@@ -1,26 +1,24 @@
 // src/engine/ApiRouter.h
 #pragma once
 
-#include <memory>
 #include <functional>
+#include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 #include <utility>
+#include <vector>
 #include "core/interfaces/IApiRouter.h"
 #include "core/interfaces/ISubRouter.h"
 
-class NexGfwRouter;
-class VirusTotalRouter;
-class SpamhausRouter;
-class FortinetRouter;
-class SecuiRouter;
-class Mf2Router;
-class WinsTaxiiRouter;
-
 class ApiRouter : public IApiRouter {
 public:
-    ApiRouter();
+    struct PrefixEntry {
+        std::string prefix;
+        ISubRouter* router;
+    };
+
+    explicit ApiRouter(std::vector<std::unique_ptr<ISubRouter>> subRouters,
+                       std::vector<PrefixEntry>                 prefixMap);
     ~ApiRouter() override;
 
     ApiResponse route(const ApiRequest& req) override;
@@ -33,7 +31,6 @@ private:
 
     void addExact(const std::string& method, const std::string& path,
                   RouteEntry::Handler handler);
-    void addPrefix(const std::string& prefix, ISubRouter* subRouter);
 
     ApiResponse handleHealth(const ApiRequest& req);
     ApiResponse handleAlerts(const ApiRequest& req);
@@ -42,14 +39,7 @@ private:
     ApiResponse handleGetCases(const ApiRequest& req);
     ApiResponse handleCreateCase(const ApiRequest& req);
 
-    std::unordered_map<std::string, RouteEntry>      m_exactRoutes;
+    std::vector<std::unique_ptr<ISubRouter>>         m_subRouters;
     std::vector<std::pair<std::string, ISubRouter*>> m_prefixRoutes;
-
-    std::unique_ptr<NexGfwRouter>     m_nexgfw;
-    std::unique_ptr<VirusTotalRouter> m_virustotal;
-    std::unique_ptr<SpamhausRouter>   m_spamhaus;
-    std::unique_ptr<SecuiRouter>      m_secui;
-    std::unique_ptr<FortinetRouter>   m_fortinet;
-    std::unique_ptr<Mf2Router>        m_mf2;
-    std::unique_ptr<WinsTaxiiRouter>  m_winsTaxii;
+    std::unordered_map<std::string, RouteEntry>      m_exactRoutes;
 };

@@ -8,7 +8,7 @@
 #include <atomic>
 #include <cstdint>
 #include "core/ApiTypes.h"
-#include "engine/ISubRouter.h"
+#include "core/interfaces/ISubRouter.h"
 
 class NexGfwRouter : public ISubRouter {
 public:

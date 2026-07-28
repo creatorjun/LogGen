@@ -1,13 +1,13 @@
 // src/engine/Mf2Router.h
 #pragma once
 
-#include "core/ApiTypes.h"
-#include "engine/ISubRouter.h"
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
 #include <mutex>
+#include <cstdint>
+#include "core/ApiTypes.h"
+#include "core/interfaces/ISubRouter.h"
 
 class Mf2Router : public ISubRouter {
 public:
@@ -17,56 +17,41 @@ public:
 
 private:
     bool        isAuthenticated(const ApiRequest& req) const;
-    std::string createSession(const std::string& userId, const std::string& token);
-    void        removeSession(const std::string& token);
+    std::string createSession();
 
     ApiResponse handleLogin(const ApiRequest& req);
     ApiResponse handleLogout(const ApiRequest& req);
-    ApiResponse handleRefresh(const ApiRequest& req);
-
-    ApiResponse handlePolicyGet(const ApiRequest& req);
-    ApiResponse handlePolicyAdd(const ApiRequest& req);
-    ApiResponse handlePolicyDelete(const ApiRequest& req);
-    ApiResponse handlePolicyEnable(const ApiRequest& req);
-
-    ApiResponse handleObjectGet(const ApiRequest& req);
-    ApiResponse handleObjectAdd(const ApiRequest& req);
-    ApiResponse handleObjectDelete(const ApiRequest& req);
-
-    ApiResponse handleSystemInfo(const ApiRequest& req);
-    ApiResponse handleApply(const ApiRequest& req);
-
+    ApiResponse handleIpReputationList(const ApiRequest& req);
+    ApiResponse handleIpReputationCreate(const ApiRequest& req);
+    ApiResponse handleIpReputationUpdate(const ApiRequest& req, const std::string& id);
+    ApiResponse handleIpReputationDelete(const ApiRequest& req, const std::string& id);
+    ApiResponse handleUrlReputationList(const ApiRequest& req);
+    ApiResponse handleUrlReputationCreate(const ApiRequest& req);
+    ApiResponse handleUrlReputationUpdate(const ApiRequest& req, const std::string& id);
+    ApiResponse handleUrlReputationDelete(const ApiRequest& req, const std::string& id);
     ApiResponse handleUnauthorized();
     ApiResponse handleNotFound(const ApiRequest& req);
-    ApiResponse handleBadRequest(const std::string& msg);
 
-    static std::string makeId();
-    static int64_t     nowUnix();
-
-    struct SessionEntry {
-        std::string userId;
-        int64_t     expires;
-    };
-
-    struct PolicyEntry {
+    struct IpEntry {
         std::string id;
-        std::string name;
-        std::string srcIp;
-        std::string dstIp;
-        std::string service;
-        std::string action;
-        bool        enabled = true;
+        std::string ip;
+        std::string category;
+        std::string description;
+        bool        active = true;
     };
 
-    struct ObjectEntry {
+    struct UrlEntry {
         std::string id;
-        std::string name;
-        std::string type;
-        std::string value;
+        std::string url;
+        std::string category;
+        std::string description;
+        bool        active = true;
     };
 
-    mutable std::mutex                               m_mutex;
-    std::unordered_map<std::string, SessionEntry>    m_sessions;
-    std::unordered_map<std::string, PolicyEntry>     m_policies;
-    std::unordered_map<std::string, ObjectEntry>     m_objects;
+    mutable std::mutex                             m_sessionMutex;
+    std::unordered_set<std::string>                m_sessions;
+    mutable std::mutex                             m_dataMutex;
+    std::unordered_map<std::string, IpEntry>       m_ipEntries;
+    std::unordered_map<std::string, UrlEntry>      m_urlEntries;
+    std::atomic<uint64_t>                          m_idCounter{1};
 };
