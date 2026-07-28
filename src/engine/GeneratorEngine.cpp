@@ -173,7 +173,7 @@ TokenRefs resolveTokenRefs(std::flat_map<std::string, std::string>& tokens) {
         .fileSize      = get("FILE_SIZE"),
         .gatherEtime   = get("GATHER_ETIME"),
         .instCd1       = get("INST_CD1"),
-        .inPktSize     = get("IN_PKT_SIZE"),
+        .inPktSize      = get("IN_PKT_SIZE"),
         .latitude      = get("LATITUDE"),
         .originalLog   = get("ORIGINAL_LOG"),
         .outPktCnt     = get("OUT_PKT_CNT"),
@@ -611,7 +611,7 @@ void GeneratorEngine::dispatcherLoop() {
     while (true) {
         const size_t n = m_dispatchQueue.drain(batch, m_running);
         for (size_t i = 0; i < n; ++i) {
-            if (m_callback) m_callback(std::move(batch[i]));
+            if (m_callback) m_callback(batch[i]);
         }
         if (!m_running.load(std::memory_order_relaxed) && m_dispatchQueue.empty())
             break;
