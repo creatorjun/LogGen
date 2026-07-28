@@ -190,6 +190,10 @@ static void renderDateOffsetSection(EventPanelViewModel& vm, ImFont* fontBold) {
     renderSectionHeader(UIText::LOG_DATE_OFFSET_LABEL, fontBold);
 
     const bool isPositive = vm.dateSign();
+    const float signBtnW  = 36.0f;
+    const float unitW     = ImGui::CalcTextSize(UIText::LOG_DATE_OFFSET_UNIT).x + 8.0f;
+    const float spacing   = ImGui::GetStyle().ItemSpacing.x;
+    const float inputW    = ImGui::GetContentRegionAvail().x - signBtnW * 2.0f - unitW - spacing * 3.0f;
 
     if (!isPositive) {
         ImGui::PushStyleColor(ImGuiCol_Button,        UIColors::kAccent);
@@ -202,7 +206,7 @@ static void renderDateOffsetSection(EventPanelViewModel& vm, ImFont* fontBold) {
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,  UIColors::kSmallBtnOffAct);
         ImGui::PushStyleColor(ImGuiCol_Text,          UIColors::kTextPrimary);
     }
-    if (ImGui::Button("-##datesign", ImVec2(28.0f, 0.0f)))
+    if (ImGui::Button("-##datesign", ImVec2(signBtnW, 0.0f)))
         vm.onDateSignChanged(false);
     ImGui::PopStyleColor(4);
 
@@ -219,7 +223,7 @@ static void renderDateOffsetSection(EventPanelViewModel& vm, ImFont* fontBold) {
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,  UIColors::kSmallBtnOffAct);
         ImGui::PushStyleColor(ImGuiCol_Text,          UIColors::kTextPrimary);
     }
-    if (ImGui::Button("+##datesign", ImVec2(28.0f, 0.0f)))
+    if (ImGui::Button("+##datesign", ImVec2(signBtnW, 0.0f)))
         vm.onDateSignChanged(true);
     ImGui::PopStyleColor(4);
 
@@ -228,8 +232,8 @@ static void renderDateOffsetSection(EventPanelViewModel& vm, ImFont* fontBold) {
     int days = vm.dateDays();
     ImGui::PushStyleColor(ImGuiCol_FrameBg,        UIColors::kSurfaceSub);
     ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, UIColors::kFrameBgHovered);
-    ImGui::SetNextItemWidth(80.0f);
-    if (ImGui::InputInt("##dateDays", &days, 1, 10)) {
+    ImGui::SetNextItemWidth(inputW);
+    if (ImGui::InputInt("##dateDays", &days, 0, 0, ImGuiInputTextFlags_CharsDecimal)) {
         if (days < EventPanelViewModel::kMinDateDays) days = EventPanelViewModel::kMinDateDays;
         if (days > EventPanelViewModel::kMaxDateDays) days = EventPanelViewModel::kMaxDateDays;
         vm.onDateDaysChanged(days);
@@ -242,7 +246,7 @@ static void renderDateOffsetSection(EventPanelViewModel& vm, ImFont* fontBold) {
     ImGui::PopStyleColor();
 
     if (vm.dateDays() == 0) {
-        ImGui::SameLine();
+        ImGui::Spacing();
         ImGui::PushStyleColor(ImGuiCol_Text, UIColors::kTextMuted);
         ImGui::TextUnformatted(UIText::LOG_DATE_TODAY_HINT);
         ImGui::PopStyleColor();
