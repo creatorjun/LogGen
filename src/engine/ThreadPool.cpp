@@ -29,7 +29,8 @@ void ThreadPool::pinCurrentThread(size_t index) {
 }
 
 ThreadPool::ThreadPool(size_t threads, bool enableAffinity)
-    : m_enableAffinity(enableAffinity)
+    : m_buf(std::make_unique<Cell[]>(kQueueCap))
+    , m_enableAffinity(enableAffinity)
 {
     for (size_t i = 0; i < kQueueCap; ++i)
         m_buf[i].seq.store(i, std::memory_order_relaxed);
