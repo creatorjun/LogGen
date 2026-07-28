@@ -22,7 +22,7 @@
 
 #include <string>
 #include <vector>
-#include "ISender.h"
+#include "core/interfaces/ISender.h"
 
 class TCPSender : public ISender {
 public:
@@ -44,6 +44,5 @@ private:
     std::string m_targetIp;
     uint16_t    m_port      = 0;
 
-    // batch coalesce buffer — reused across sendBatch calls
     std::string m_coalesceBuf;
 };

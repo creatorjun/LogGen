@@ -1,7 +1,7 @@
 // src/engine/UDPSender.h
 #pragma once
 
-#include "ISender.h"
+#include "core/interfaces/ISender.h"
 #include <string>
 #include <vector>
 #include "core/Constants.h"

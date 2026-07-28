@@ -7,14 +7,14 @@
 #include <unordered_map>
 #include <vector>
 #include <utility>
-#include "engine/IApiRouter.h"
-#include "engine/ISubRouter.h"
+#include "core/interfaces/IApiRouter.h"
+#include "core/interfaces/ISubRouter.h"
 
 class NexGfwRouter;
 class VirusTotalRouter;
 class SpamhausRouter;
-class SecuiRouter;
 class FortinetRouter;
+class SecuiRouter;
 class Mf2Router;
 class WinsTaxiiRouter;
 
@@ -42,8 +42,8 @@ private:
     ApiResponse handleGetCases(const ApiRequest& req);
     ApiResponse handleCreateCase(const ApiRequest& req);
 
-    std::unordered_map<std::string, RouteEntry>          m_exactRoutes;
-    std::vector<std::pair<std::string, ISubRouter*>>     m_prefixRoutes;
+    std::unordered_map<std::string, RouteEntry>      m_exactRoutes;
+    std::vector<std::pair<std::string, ISubRouter*>> m_prefixRoutes;
 
     std::unique_ptr<NexGfwRouter>     m_nexgfw;
     std::unique_ptr<VirusTotalRouter> m_virustotal;

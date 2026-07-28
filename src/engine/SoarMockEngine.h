@@ -1,8 +1,8 @@
 // src/engine/SoarMockEngine.h
 #pragma once
 
-#include "ISoarMockEngine.h"
-#include "IApiRouter.h"
+#include "core/interfaces/ISoarMockEngine.h"
+#include "core/interfaces/IApiRouter.h"
 #include <atomic>
 #include <functional>
 #include <memory>

@@ -6,8 +6,8 @@
 #include <vector>
 #include <functional>
 #include <imgui.h>
-#include "engine/IGeneratorEngine.h"
-#include "engine/ISoarMockEngine.h"
+#include "core/interfaces/IGeneratorEngine.h"
+#include "core/interfaces/ISoarMockEngine.h"
 #include "core/DeviceProfile.h"
 #include "core/channel/LogBuffer.h"
 #include "core/channel/ApiRequestBuffer.h"
@@ -46,10 +46,10 @@ private:
     LogBuffer        m_logBuffer;
     ApiRequestBuffer m_apiBuffer;
 
-    AppViewModel                          m_viewModel;
+    AppViewModel                           m_viewModel;
     std::unique_ptr<MonitorPanelViewModel> m_monitorVM;
-    DevicePanelViewModel                  m_deviceVM;
-    EventPanelViewModel                   m_eventVM;
+    DevicePanelViewModel                   m_deviceVM;
+    EventPanelViewModel                    m_eventVM;
 
     DevicePanel  m_devicePanel;
     EventPanel   m_eventPanel;

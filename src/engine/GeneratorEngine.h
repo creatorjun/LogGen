@@ -14,7 +14,7 @@
 #include <flat_set>
 #include <expected>
 #include <ranges>
-#include "engine/IGeneratorEngine.h"
+#include "core/interfaces/IGeneratorEngine.h"
 #include "engine/LogDispatchQueue.h"
 #include "engine/TIPool.h"
 #include "engine/WorkerContext.h"

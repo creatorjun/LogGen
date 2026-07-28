@@ -1,6 +1,6 @@
 // src/infrastructure/HttpReceiver.cpp
 #include "HttpReceiver.h"
-#include "engine/IApiRouter.h"
+#include "core/interfaces/IApiRouter.h"
 #include "engine/ApiRouter.h"
 #include <httplib.h>
 #include <chrono>
@@ -9,7 +9,6 @@
 #include <unordered_map>
 #include "logging/Logger.h"
 
-// URL-decode a percent-encoded string (e.g. %2F -> /, %3D -> =)
 static std::string urlDecode(const std::string& src) {
     std::string out;
     out.reserve(src.size());
@@ -38,7 +37,6 @@ static std::string urlDecode(const std::string& src) {
     return out;
 }
 
-// Parse key=value&... query string into an unordered_map, URL-decoding both keys and values.
 static void parseQueryString(const std::string& qs,
                              std::unordered_map<std::string, std::string>& out) {
     std::istringstream ss(qs);
@@ -59,9 +57,6 @@ static ApiRequest buildApiRequest(const httplib::Request& req) {
     apiReq.method = req.method;
     apiReq.body   = req.body;
 
-    // req.target holds the original request-URI exactly as it came over the wire.
-    // httplib skips query-string parsing when Content-Type is application/json,
-    // so we always parse req.target ourselves and URL-decode the values.
     const auto qpos = req.target.find('?');
     if (qpos != std::string::npos) {
         apiReq.path = req.target.substr(0, qpos);
@@ -70,7 +65,6 @@ static ApiRequest buildApiRequest(const httplib::Request& req) {
         apiReq.path = req.target;
     }
 
-    // Also merge whatever httplib put into req.params (form-encoded body, etc.)
     for (const auto& p : req.params)
         apiReq.params.insert_or_assign(p.first, p.second);
 
@@ -126,7 +120,7 @@ bool HttpReceiver::start(uint16_t port, RequestCallback cb, int threadCount) {
     auto handler = [this](const httplib::Request& req, httplib::Response& res) {
         const auto reqStart = std::chrono::steady_clock::now();
 
-        const ApiRequest  apiReq  = buildApiRequest(req);
+        const ApiRequest apiReq = buildApiRequest(req);
 
         {
             std::string raw = "[PARSED] " + req.method + " " + apiReq.path + "\n";

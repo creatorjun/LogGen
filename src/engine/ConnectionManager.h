@@ -4,7 +4,7 @@
 #include <string>
 #include <expected>
 #include <chrono>
-#include "engine/ISender.h"
+#include "core/interfaces/ISender.h"
 #include "engine/UDPSender.h"
 #include "core/DeviceProfile.h"
 
