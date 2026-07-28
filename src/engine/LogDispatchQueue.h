@@ -49,10 +49,10 @@ public:
         }
         cell->data = std::move(entry);
         cell->seq.store(pos + 1, std::memory_order_release);
+        m_wakeFlag.notify_one();
         return true;
     }
 
-    // move-aware: entries가 rvalue이면 각 LogEntry를 move하여 string 복사 제거
     size_t tryPushBatch(std::vector<LogEntry>& entries, size_t count) {
         if (count == 0) return 0;
         const size_t n = (count < entries.size()) ? count : entries.size();
@@ -86,13 +86,13 @@ public:
         for (size_t i = 0; i < n; ++i) {
             const size_t pos  = base + i;
             Cell*        cell = &m_buf[pos & m_mask];
-            // spin-wait: 자리가 준비될 때까지 대기 (단일 생산자 경로에서는 즉시 통과)
             size_t seq;
             do { seq = cell->seq.load(std::memory_order_acquire); }
             while (static_cast<intptr_t>(seq) - static_cast<intptr_t>(pos) != 0);
-            cell->data = std::move(entries[i]);  // ← copy → move: string heap 재할당 제거
+            cell->data = std::move(entries[i]);
             cell->seq.store(pos + 1, std::memory_order_release);
         }
+        m_wakeFlag.notify_one();
         return n;
     }
 
@@ -129,12 +129,12 @@ public:
                 continue;
             }
 
-            if (m_wakeFlag.load(std::memory_order_acquire)) {
-                m_wakeFlag.store(false, std::memory_order_relaxed);
-                return 0;
-            }
+            m_wakeFlag.store(false, std::memory_order_relaxed);
+            m_wakeFlag.wait(false, std::memory_order_acquire);
 
-            std::this_thread::sleep_for(Constants::Queue::kSleepDuration);
+            if (!running.load(std::memory_order_relaxed) && empty())
+                return 0;
+
             pos  = m_dequeuePos.load(std::memory_order_relaxed);
             spin = 0;
         }
@@ -156,6 +156,7 @@ public:
 
     void wakeAll() {
         m_wakeFlag.store(true, std::memory_order_release);
+        m_wakeFlag.notify_all();
     }
 
     [[nodiscard]] bool   empty()    const noexcept {
